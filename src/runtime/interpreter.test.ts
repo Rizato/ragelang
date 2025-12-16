@@ -1477,5 +1477,159 @@ clamped = clamp(raw_value, 0, 100)
     // Clamp worked
     expect(env.get('clamped')).toBe(100);
   });
+
+  // ============ COLOR HELPER TESTS ============
+
+  it('should create rgba color strings', () => {
+    const interpreter = runProgram(`
+color1 = rgba(255, 0, 0, 1)
+color2 = rgba(0, 128, 255, 0.5)
+color3 = rgba(100, 100, 100, 0)
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('color1')).toBe('rgba(255, 0, 0, 1)');
+    expect(env.get('color2')).toBe('rgba(0, 128, 255, 0.5)');
+    expect(env.get('color3')).toBe('rgba(100, 100, 100, 0)');
+  });
+
+  it('should create rgb color strings', () => {
+    const interpreter = runProgram(`
+color1 = rgb(255, 0, 0)
+color2 = rgb(0, 128, 255)
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('color1')).toBe('rgb(255, 0, 0)');
+    expect(env.get('color2')).toBe('rgb(0, 128, 255)');
+  });
+
+  it('should create hsla color strings', () => {
+    const interpreter = runProgram(`
+color1 = hsla(0, 100, 50, 1)
+color2 = hsla(180, 50, 75, 0.5)
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('color1')).toBe('hsla(0, 100%, 50%, 1)');
+    expect(env.get('color2')).toBe('hsla(180, 50%, 75%, 0.5)');
+  });
+
+  it('should create hsl color strings', () => {
+    const interpreter = runProgram(`
+color1 = hsl(0, 100, 50)
+color2 = hsl(240, 75, 25)
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('color1')).toBe('hsl(0, 100%, 50%)');
+    expect(env.get('color2')).toBe('hsl(240, 75%, 25%)');
+  });
+
+  it('should default rgba alpha to 1', () => {
+    const interpreter = runProgram(`
+color = rgba(255, 0, 0)
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('color')).toBe('rgba(255, 0, 0, 1)');
+  });
+
+  it('should floor rgb values', () => {
+    const interpreter = runProgram(`
+color = rgb(255.7, 128.3, 64.9)
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('color')).toBe('rgb(255, 128, 64)');
+  });
+
+  // ============ DRAWING WITH ALPHA TESTS ============
+
+  it('should call rect with alpha parameter', () => {
+    const interpreter = runProgram(`
+// rect(x, y, width, height, color, alpha)
+rect(10, 20, 100, 50, "#ff0000", 0.5)
+result = true
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+  });
+
+  it('should call circle with alpha parameter', () => {
+    const interpreter = runProgram(`
+// circle(x, y, radius, color, alpha)
+circle(100, 100, 50, "#00ff00", 0.75)
+result = true
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+  });
+
+  it('should call text with alpha parameter', () => {
+    const interpreter = runProgram(`
+// text(str, x, y, size, color, alpha)
+text("Hello", 10, 30, 24, "#ffffff", 0.9)
+result = true
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+  });
+
+  it('should call line with alpha parameter', () => {
+    const interpreter = runProgram(`
+// line(x1, y1, x2, y2, color, width, alpha)
+line(0, 0, 100, 100, "#0000ff", 2, 0.6)
+result = true
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+  });
+
+  it('should call sprite with alpha parameter', () => {
+    const interpreter = runProgram(`
+// sprite(path, x, y, w, h, sx, sy, sw, sh, color, alpha)
+sprite("", 50, 50, 32, 32, 0, 0, 32, 32, "#ff00ff", 0.5)
+result = true
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+  });
+
+  it('should default alpha to 1 when not provided', () => {
+    const interpreter = runProgram(`
+// These should all work without alpha (defaults to 1)
+rect(10, 20, 100, 50, "#ff0000")
+circle(100, 100, 50, "#00ff00")
+text("Test", 10, 30, 16, "#ffffff")
+line(0, 0, 100, 100, "#0000ff")
+result = true
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+  });
+
+  it('should use rgba colors with drawing functions', () => {
+    const interpreter = runProgram(`
+// Can also use rgba() for per-call alpha
+color = rgba(255, 0, 0, 0.5)
+rect(10, 20, 100, 50, color)
+result = true
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+  });
+
+  it('should create trail effect with alpha', () => {
+    const interpreter = runProgram(`
+// Simulate trail rendering with decreasing alpha
+i = 0
+loop {
+  if (i >= 5) {
+    break
+  }
+  alpha = 1 - (i / 5)
+  rect(i * 20, 100, 16, 16, "#00cec9", alpha)
+  i = i + 1
+}
+result = true
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+  });
 });
 
