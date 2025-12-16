@@ -146,6 +146,21 @@ export function activate(context: vscode.ExtensionContext) {
             }
         })
     );
+
+    // Register command to toggle falling character highlighting
+    context.subscriptions.push(
+        vscode.commands.registerCommand('ragelang.toggleFallingHighlight', async () => {
+            const config = vscode.workspace.getConfiguration('ragelang');
+            const currentValue = config.get<boolean>('enableFallingHighlight', true);
+            
+            // Toggle the setting
+            await config.update('enableFallingHighlight', !currentValue, vscode.ConfigurationTarget.Global);
+            
+            // Show notification
+            const newState = !currentValue ? 'enabled' : 'disabled';
+            vscode.window.showInformationMessage(`Ragelang: Falling character highlighting ${newState}`);
+        })
+    );
 }
 
 function showPreviewPanel(context: vscode.ExtensionContext, document: vscode.TextDocument) {

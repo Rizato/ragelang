@@ -45,6 +45,11 @@
         "command": "ragelang.togglePreview",
         "title": "Ragelang: Toggle Preview",
         "icon": "$(preview)"
+      },
+      {
+        "command": "ragelang.toggleFallingHighlight",
+        "title": "Ragelang: Toggle Falling Character Highlighting",
+        "icon": "$(eye)"
       }
     ],
     "keybindings": [
@@ -58,6 +63,12 @@
         "command": "ragelang.showFallingPreview",
         "key": "ctrl+k v",
         "mac": "cmd+k v",
+        "when": "editorLangId == ragelang"
+      },
+      {
+        "command": "ragelang.toggleFallingHighlight",
+        "key": "ctrl+shift+h",
+        "mac": "cmd+shift+h",
         "when": "editorLangId == ragelang"
       }
     ],
@@ -76,6 +87,10 @@
         },
         {
           "command": "ragelang.togglePreview",
+          "when": "editorLangId == ragelang"
+        },
+        {
+          "command": "ragelang.toggleFallingHighlight",
           "when": "editorLangId == ragelang"
         }
       ]
