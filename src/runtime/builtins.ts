@@ -71,24 +71,26 @@ export function createBuiltins(
   const inputManager = input ?? new InputManager();
 
   // Drawing functions
-  // text(text, x, y, size, color)
+  // text(text, x, y, size, color, alpha)
   builtins.set('text', (
     text: RageValue, 
     x: RageValue, 
     y: RageValue, 
     size: RageValue = 16, 
-    color: RageValue = '#ffffff'
+    color: RageValue = '#ffffff',
+    alpha: RageValue = 1
   ) => {
-    renderer.text(String(text), Number(x), Number(y), Number(size), String(color));
+    renderer.text(String(text), Number(x), Number(y), Number(size), String(color), Number(alpha));
     return null;
   });
 
-  // sprite(path, x, y, width, height, sx, sy, sw, sh, color)
+  // sprite(path, x, y, width, height, sx, sy, sw, sh, color, alpha)
   // path: image path (null for colored rectangle)
   // x, y: destination position on canvas
   // width, height: destination size on canvas
   // sx, sy, sw, sh: source rectangle from sprite sheet (optional)
   // color: placeholder/fallback color
+  // alpha: transparency (0-1)
   builtins.set('sprite', (
     path: RageValue,
     x: RageValue,
@@ -99,7 +101,8 @@ export function createBuiltins(
     sy: RageValue = null,
     sw: RageValue = null,
     sh: RageValue = null,
-    color: RageValue = '#ffffff'
+    color: RageValue = '#ffffff',
+    alpha: RageValue = 1
   ) => {
     renderer.sprite(
       path ? String(path) : null, 
@@ -111,7 +114,8 @@ export function createBuiltins(
       sy !== null ? Number(sy) : null,
       sw !== null ? Number(sw) : null,
       sh !== null ? Number(sh) : null,
-      String(color)
+      String(color),
+      Number(alpha)
     );
     return null;
   });
@@ -121,32 +125,42 @@ export function createBuiltins(
     return null;
   });
 
-  // rect(x, y, width, height, color) - draw filled rectangle
+  // rect(x, y, width, height, color, alpha) - draw filled rectangle
   builtins.set('rect', (
     x: RageValue,
     y: RageValue,
     width: RageValue,
     height: RageValue,
-    color: RageValue
+    color: RageValue,
+    alpha: RageValue = 1
   ) => {
-    renderer.rect(Number(x), Number(y), Number(width), Number(height), String(color));
+    renderer.rect(Number(x), Number(y), Number(width), Number(height), String(color), Number(alpha));
     return null;
   });
 
-  builtins.set('circle', (x: RageValue, y: RageValue, radius: RageValue, color: RageValue) => {
-    renderer.circle(Number(x), Number(y), Number(radius), String(color));
+  // circle(x, y, radius, color, alpha) - draw filled circle
+  builtins.set('circle', (
+    x: RageValue, 
+    y: RageValue, 
+    radius: RageValue, 
+    color: RageValue,
+    alpha: RageValue = 1
+  ) => {
+    renderer.circle(Number(x), Number(y), Number(radius), String(color), Number(alpha));
     return null;
   });
 
+  // line(x1, y1, x2, y2, color, width, alpha) - draw a line
   builtins.set('line', (
     x1: RageValue,
     y1: RageValue,
     x2: RageValue,
     y2: RageValue,
     color: RageValue,
-    width: RageValue = 1
+    width: RageValue = 1,
+    alpha: RageValue = 1
   ) => {
-    renderer.line(Number(x1), Number(y1), Number(x2), Number(y2), String(color), Number(width));
+    renderer.line(Number(x1), Number(y1), Number(x2), Number(y2), String(color), Number(width), Number(alpha));
     return null;
   });
 
@@ -398,6 +412,30 @@ export function createBuiltins(
 
   // Time helpers (for animations)
   builtins.set('time', () => performance.now() / 1000);
+
+  // Color helpers
+  // rgba(r, g, b, a) - creates an rgba color string
+  // r, g, b: 0-255, a: 0-1
+  builtins.set('rgba', (r: RageValue, g: RageValue, b: RageValue, a: RageValue = 1) => {
+    return `rgba(${Math.floor(Number(r))}, ${Math.floor(Number(g))}, ${Math.floor(Number(b))}, ${Number(a)})`;
+  });
+
+  // rgb(r, g, b) - creates an rgb color string
+  builtins.set('rgb', (r: RageValue, g: RageValue, b: RageValue) => {
+    return `rgb(${Math.floor(Number(r))}, ${Math.floor(Number(g))}, ${Math.floor(Number(b))})`;
+  });
+
+  // hsla(h, s, l, a) - creates an hsla color string
+  // h: 0-360, s: 0-100, l: 0-100, a: 0-1
+  builtins.set('hsla', (h: RageValue, s: RageValue, l: RageValue, a: RageValue = 1) => {
+    return `hsla(${Number(h)}, ${Number(s)}%, ${Number(l)}%, ${Number(a)})`;
+  });
+
+  // hsl(h, s, l) - creates an hsl color string
+  builtins.set('hsl', (h: RageValue, s: RageValue, l: RageValue) => {
+    return `hsl(${Number(h)}, ${Number(s)}%, ${Number(l)}%)`;
+  });
+
 
   // Audio functions
   // music(path, volume) - plays looping background music

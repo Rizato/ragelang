@@ -53,19 +53,22 @@ export class CanvasRenderer {
 
   /**
    * Draw text on the canvas
-   * text(text, x, y, size, color)
+   * text(text, x, y, size, color, alpha)
    */
-  text(text: string, x: number, y: number, size: number = 16, color: string = '#ffffff'): void {
+  text(text: string, x: number, y: number, size: number = 16, color: string = '#ffffff', alpha: number = 1): void {
     if (!this.ctx) return;
 
+    const prevAlpha = this.ctx.globalAlpha;
+    this.ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
     this.ctx.fillStyle = color;
     this.ctx.font = `${size}px monospace`;
     this.ctx.fillText(text, x, y);
+    this.ctx.globalAlpha = prevAlpha;
   }
 
   /**
    * Draw a sprite on the canvas
-   * sprite(path, x, y, width, height, sx, sy, sw, sh, color)
+   * sprite(path, x, y, width, height, sx, sy, sw, sh, color, alpha)
    * 
    * @param path - Image path (null for colored rectangle)
    * @param x - Destination X on canvas
@@ -77,6 +80,7 @@ export class CanvasRenderer {
    * @param sw - Source width in sprite sheet (optional)
    * @param sh - Source height in sprite sheet (optional)
    * @param color - Color for placeholder or tint (optional)
+   * @param alpha - Transparency 0-1 (optional)
    * 
    * If path is null/empty, draws a colored rectangle.
    * If sx/sy/sw/sh are provided, extracts that region from the sprite sheet.
@@ -91,14 +95,19 @@ export class CanvasRenderer {
     sy: number | null = null,
     sw: number | null = null,
     sh: number | null = null,
-    color: string = '#ffffff'
+    color: string = '#ffffff',
+    alpha: number = 1
   ): void {
     if (!this.ctx) return;
+
+    const prevAlpha = this.ctx.globalAlpha;
+    this.ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
 
     // If no path, draw a colored rectangle
     if (!path) {
       this.ctx.fillStyle = color;
       this.ctx.fillRect(x, y, width, height);
+      this.ctx.globalAlpha = prevAlpha;
       return;
     }
 
@@ -143,66 +152,83 @@ export class CanvasRenderer {
       this.ctx.fillStyle = color;
       this.ctx.fillRect(x, y, width, height);
     }
+
+    this.ctx.globalAlpha = prevAlpha;
   }
 
   /**
    * Draw a filled rectangle
    */
-  rect(x: number, y: number, width: number, height: number, color: string): void {
+  rect(x: number, y: number, width: number, height: number, color: string, alpha: number = 1): void {
     if (!this.ctx) return;
     
+    const prevAlpha = this.ctx.globalAlpha;
+    this.ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
     this.ctx.fillStyle = color;
     this.ctx.fillRect(x, y, width, height);
+    this.ctx.globalAlpha = prevAlpha;
   }
 
   /**
    * Draw a stroked rectangle (outline only)
    */
-  strokeRect(x: number, y: number, width: number, height: number, color: string, lineWidth: number = 1): void {
+  strokeRect(x: number, y: number, width: number, height: number, color: string, lineWidth: number = 1, alpha: number = 1): void {
     if (!this.ctx) return;
     
+    const prevAlpha = this.ctx.globalAlpha;
+    this.ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
     this.ctx.strokeStyle = color;
     this.ctx.lineWidth = lineWidth;
     this.ctx.strokeRect(x, y, width, height);
+    this.ctx.globalAlpha = prevAlpha;
   }
 
   /**
    * Draw a circle
    */
-  circle(x: number, y: number, radius: number, color: string): void {
+  circle(x: number, y: number, radius: number, color: string, alpha: number = 1): void {
     if (!this.ctx) return;
 
+    const prevAlpha = this.ctx.globalAlpha;
+    this.ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
     this.ctx.fillStyle = color;
     this.ctx.beginPath();
     this.ctx.arc(x, y, radius, 0, Math.PI * 2);
     this.ctx.fill();
+    this.ctx.globalAlpha = prevAlpha;
   }
 
   /**
    * Draw a stroked circle (outline only)
    */
-  strokeCircle(x: number, y: number, radius: number, color: string, lineWidth: number = 1): void {
+  strokeCircle(x: number, y: number, radius: number, color: string, lineWidth: number = 1, alpha: number = 1): void {
     if (!this.ctx) return;
 
+    const prevAlpha = this.ctx.globalAlpha;
+    this.ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
     this.ctx.strokeStyle = color;
     this.ctx.lineWidth = lineWidth;
     this.ctx.beginPath();
     this.ctx.arc(x, y, radius, 0, Math.PI * 2);
     this.ctx.stroke();
+    this.ctx.globalAlpha = prevAlpha;
   }
 
   /**
    * Draw a line
    */
-  line(x1: number, y1: number, x2: number, y2: number, color: string, width: number = 1): void {
+  line(x1: number, y1: number, x2: number, y2: number, color: string, width: number = 1, alpha: number = 1): void {
     if (!this.ctx) return;
 
+    const prevAlpha = this.ctx.globalAlpha;
+    this.ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
     this.ctx.strokeStyle = color;
     this.ctx.lineWidth = width;
     this.ctx.beginPath();
     this.ctx.moveTo(x1, y1);
     this.ctx.lineTo(x2, y2);
     this.ctx.stroke();
+    this.ctx.globalAlpha = prevAlpha;
   }
 
   /**
@@ -247,4 +273,5 @@ export class CanvasRenderer {
       img.src = path;
     });
   }
+
 }
