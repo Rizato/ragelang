@@ -7,6 +7,10 @@ let fallingDiagnostics: vscode.DiagnosticCollection;
 // Decoration type for falling characters
 let fallingDecorationType: vscode.TextEditorDecorationType;
 
+// Preview panel
+let previewPanel: vscode.WebviewPanel | undefined;
+let previewSourceUri: vscode.Uri | undefined;
+
 export function activate(context: vscode.ExtensionContext) {
     console.log('Ragelang extension is now active');
 
@@ -52,6 +56,11 @@ export function activate(context: vscode.ExtensionContext) {
                 if (editor && editor.document === event.document) {
                     analyzeDocument(event.document, editor);
                 }
+                // Update preview if this is the source document
+                if (previewPanel && previewSourceUri && 
+                    event.document.uri.toString() === previewSourceUri.toString()) {
+                    updatePreview(event.document);
+                }
             }
         })
     );
@@ -93,7 +102,7 @@ export function activate(context: vscode.ExtensionContext) {
                             `⚠️ **Unsupported Character**\n\n` +
                             `This character \`${charAtPos}\` will fall because it has no support beneath it.\n\n` +
                             `In Ragelang, characters must be supported by characters directly below ` +
-                            `or diagonally adjacent below them.`
+                            `or diagonally adjacent below them, all the way down to the foundation (\`#\`).`
                         )
                     );
                 }
@@ -103,7 +112,7 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
-    // Register command to show falling preview
+    // Register command to show falling preview (opens in side panel)
     context.subscriptions.push(
         vscode.commands.registerCommand('ragelang.showFallingPreview', () => {
             const editor = vscode.window.activeTextEditor;
@@ -112,21 +121,123 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
 
-            const processor = new FallingProcessor(editor.document.getText());
-            const result = processor.process();
-            
-            // Show in a new document
-            vscode.workspace.openTextDocument({
-                content: result,
-                language: 'ragelang'
-            }).then(doc => {
-                vscode.window.showTextDocument(doc, {
-                    viewColumn: vscode.ViewColumn.Beside,
-                    preview: true
-                });
-            });
+            showPreviewPanel(context, editor.document);
         })
     );
+
+    // Register command to toggle preview (like markdown preview toggle)
+    context.subscriptions.push(
+        vscode.commands.registerCommand('ragelang.togglePreview', () => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor || editor.document.languageId !== 'ragelang') {
+                vscode.window.showWarningMessage('Open a Ragelang file to toggle preview');
+                return;
+            }
+
+            if (previewPanel && previewSourceUri && 
+                editor.document.uri.toString() === previewSourceUri.toString()) {
+                // Close preview if it's already showing this document
+                previewPanel.dispose();
+                previewPanel = undefined;
+                previewSourceUri = undefined;
+            } else {
+                // Show preview
+                showPreviewPanel(context, editor.document);
+            }
+        })
+    );
+}
+
+function showPreviewPanel(context: vscode.ExtensionContext, document: vscode.TextDocument) {
+    const columnToShowIn = vscode.ViewColumn.Beside;
+    
+    if (previewPanel) {
+        // If we already have a panel, show it in the target column
+        previewPanel.reveal(columnToShowIn);
+        previewSourceUri = document.uri;
+        updatePreview(document);
+    } else {
+        // Create a new panel
+        previewPanel = vscode.window.createWebviewPanel(
+            'ragelangPreview',
+            'Ragelang Preview',
+            columnToShowIn,
+            {
+                enableScripts: true,
+                retainContextWhenHidden: true
+            }
+        );
+        
+        previewSourceUri = document.uri;
+        
+        // Set icon
+        previewPanel.iconPath = vscode.Uri.joinPath(context.extensionUri, 'icon.png');
+        
+        // Update content
+        updatePreview(document);
+        
+        // Handle panel disposal
+        previewPanel.onDidDispose(() => {
+            previewPanel = undefined;
+            previewSourceUri = undefined;
+        }, null, context.subscriptions);
+    }
+}
+
+function updatePreview(document: vscode.TextDocument) {
+    if (!previewPanel) return;
+    
+    const processor = new FallingProcessor(document.getText());
+    const processedCode = processor.process();
+    
+    previewPanel.title = `Preview: ${getFileName(document.uri)}`;
+    previewPanel.webview.html = getPreviewHtml(processedCode);
+}
+
+function getFileName(uri: vscode.Uri): string {
+    const parts = uri.path.split('/');
+    return parts[parts.length - 1];
+}
+
+function getPreviewHtml(processed: string): string {
+    // Escape HTML entities
+    const escapeHtml = (str: string) => str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ragelang Preview</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: var(--vscode-editor-font-family, 'Consolas', 'Courier New', monospace);
+            font-size: var(--vscode-editor-font-size, 14px);
+            background: var(--vscode-editor-background);
+            color: var(--vscode-editor-foreground);
+            padding: 0;
+            line-height: 1.5;
+        }
+        pre {
+            padding: 12px;
+            margin: 0;
+            white-space: pre;
+            font-family: inherit;
+        }
+    </style>
+</head>
+<body><pre>${escapeHtml(processed)}</pre></body>
+</html>`;
 }
 
 function updateDecorationStyle() {
@@ -194,5 +305,7 @@ export function deactivate() {
     if (fallingDecorationType) {
         fallingDecorationType.dispose();
     }
+    if (previewPanel) {
+        previewPanel.dispose();
+    }
 }
-
