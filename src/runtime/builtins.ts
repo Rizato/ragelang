@@ -157,12 +157,36 @@ export function createBuiltins(
   builtins.set('round', (x: RageValue) => Math.round(Number(x)));
   builtins.set('min', (a: RageValue, b: RageValue) => Math.min(Number(a), Number(b)));
   builtins.set('max', (a: RageValue, b: RageValue) => Math.max(Number(a), Number(b)));
+  
+  // Trigonometry
   builtins.set('sin', (x: RageValue) => Math.sin(Number(x)));
   builtins.set('cos', (x: RageValue) => Math.cos(Number(x)));
   builtins.set('tan', (x: RageValue) => Math.tan(Number(x)));
+  builtins.set('asin', (x: RageValue) => Math.asin(Number(x)));
+  builtins.set('acos', (x: RageValue) => Math.acos(Number(x)));
+  builtins.set('atan', (x: RageValue) => Math.atan(Number(x)));
   builtins.set('atan2', (y: RageValue, x: RageValue) => Math.atan2(Number(y), Number(x)));
+  builtins.set('sinh', (x: RageValue) => Math.sinh(Number(x)));
+  builtins.set('cosh', (x: RageValue) => Math.cosh(Number(x)));
+  builtins.set('tanh', (x: RageValue) => Math.tanh(Number(x)));
+  
+  // Constants
+  builtins.set('PI', () => Math.PI);
+  builtins.set('TAU', () => Math.PI * 2);  // Full circle
+  builtins.set('E', () => Math.E);
+  
+  // Angle conversion
+  builtins.set('deg', (radians: RageValue) => Number(radians) * (180 / Math.PI));
+  builtins.set('rad', (degrees: RageValue) => Number(degrees) * (Math.PI / 180));
+  
+  // More math
   builtins.set('sqrt', (x: RageValue) => Math.sqrt(Number(x)));
   builtins.set('pow', (base: RageValue, exp: RageValue) => Math.pow(Number(base), Number(exp)));
+  builtins.set('log', (x: RageValue) => Math.log(Number(x)));
+  builtins.set('log10', (x: RageValue) => Math.log10(Number(x)));
+  builtins.set('exp', (x: RageValue) => Math.exp(Number(x)));
+  
+  // Random
   builtins.set('random', () => Math.random());
   builtins.set('randomInt', (min: RageValue, max: RageValue) => {
     const nmin = Math.floor(Number(min));
@@ -491,6 +515,44 @@ export function createBuiltins(
   builtins.set('touch_y', (index: RageValue = 0) => {
     const pos = inputManager.getTouchPosition(Number(index) | 0);
     return pos ? pos.y : 0;
+  });
+
+  // ============ Input Buffer (Platformer Mechanics) ============
+  
+  // buffer_input(action, duration) - buffers an input for duration seconds
+  // Use this for jump buffering: if player presses jump before landing,
+  // the jump will still happen when they land
+  builtins.set('buffer_input', (action: RageValue, duration: RageValue = 0.1) => {
+    inputManager.bufferInput(String(action), Number(duration));
+    return null;
+  });
+
+  // check_buffer(action) - checks if action is buffered and consumes it
+  // Returns true if buffered, false otherwise
+  builtins.set('check_buffer', (action: RageValue) => {
+    return inputManager.checkBuffer(String(action));
+  });
+
+  // peek_buffer(action) - checks if action is buffered WITHOUT consuming it
+  builtins.set('peek_buffer', (action: RageValue) => {
+    return inputManager.peekBuffer(String(action));
+  });
+
+  // clear_buffer(action) - clears a specific buffered action
+  builtins.set('clear_buffer', (action: RageValue) => {
+    inputManager.clearBuffer(String(action));
+    return null;
+  });
+
+  // clear_all_buffers() - clears all buffered inputs
+  builtins.set('clear_all_buffers', () => {
+    inputManager.clearAllBuffers();
+    return null;
+  });
+
+  // buffer_time(action) - returns remaining buffer time in seconds
+  builtins.set('buffer_time', (action: RageValue) => {
+    return inputManager.getBufferTime(String(action));
   });
 
   return builtins;

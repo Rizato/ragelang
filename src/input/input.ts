@@ -58,6 +58,9 @@ export class InputManager {
   private gamepadIndex: number | null = null;
   private prevGamepadButtons: boolean[] = [];
   
+  // Input buffer for platformer mechanics (action -> expiry timestamp)
+  private inputBuffer: Map<string, number> = new Map();
+  
   // Frame tracking
   private initialized: boolean = false;
 
@@ -235,6 +238,97 @@ export class InputManager {
     if (key.length === 1) return `Key${key.toUpperCase()}`;
     
     return key;
+  }
+
+  // ============ Input Buffer (Platformer Mechanic) ============
+
+  /**
+   * Buffer an input for a given duration.
+   * Useful for jump buffering - if player presses jump slightly before landing,
+   * the jump will still happen when they land.
+   * @param action - The action to buffer (e.g., "jump")
+   * @param duration - How long to buffer in seconds (e.g., 0.1 for 100ms)
+   */
+  bufferInput(action: string, duration: number): void {
+    const expiryTime = performance.now() + (duration * 1000);
+    this.inputBuffer.set(action.toLowerCase(), expiryTime);
+  }
+
+  /**
+   * Check if an action is buffered and consume it.
+   * Returns true if the action was buffered and hasn't expired.
+   * Clears the buffer after checking (consume on use).
+   * @param action - The action to check
+   */
+  checkBuffer(action: string): boolean {
+    const key = action.toLowerCase();
+    const expiry = this.inputBuffer.get(key);
+    
+    if (expiry === undefined) return false;
+    
+    // Check if buffer has expired
+    if (performance.now() > expiry) {
+      this.inputBuffer.delete(key);
+      return false;
+    }
+    
+    // Consume the buffer
+    this.inputBuffer.delete(key);
+    return true;
+  }
+
+  /**
+   * Check if an action is buffered WITHOUT consuming it.
+   * @param action - The action to check
+   */
+  peekBuffer(action: string): boolean {
+    const key = action.toLowerCase();
+    const expiry = this.inputBuffer.get(key);
+    
+    if (expiry === undefined) return false;
+    
+    // Check if buffer has expired
+    if (performance.now() > expiry) {
+      this.inputBuffer.delete(key);
+      return false;
+    }
+    
+    return true;
+  }
+
+  /**
+   * Clear a specific buffered action.
+   * @param action - The action to clear
+   */
+  clearBuffer(action: string): void {
+    this.inputBuffer.delete(action.toLowerCase());
+  }
+
+  /**
+   * Clear all buffered inputs.
+   */
+  clearAllBuffers(): void {
+    this.inputBuffer.clear();
+  }
+
+  /**
+   * Get remaining buffer time for an action in seconds.
+   * Returns 0 if not buffered or expired.
+   * @param action - The action to check
+   */
+  getBufferTime(action: string): number {
+    const key = action.toLowerCase();
+    const expiry = this.inputBuffer.get(key);
+    
+    if (expiry === undefined) return 0;
+    
+    const remaining = (expiry - performance.now()) / 1000;
+    if (remaining <= 0) {
+      this.inputBuffer.delete(key);
+      return 0;
+    }
+    
+    return remaining;
   }
 
   // ============ Mouse Input ============

@@ -616,6 +616,24 @@ export class Interpreter {
     'mouse_released': ['button'],
     'touch_x': ['index'],
     'touch_y': ['index'],
+    // Input Buffer
+    'buffer_input': ['action', 'duration'],
+    'check_buffer': ['action'],
+    'peek_buffer': ['action'],
+    'clear_buffer': ['action'],
+    'buffer_time': ['action'],
+    // Math
+    'deg': ['radians'],
+    'rad': ['degrees'],
+    'asin': ['x'],
+    'acos': ['x'],
+    'atan': ['x'],
+    'sinh': ['x'],
+    'cosh': ['x'],
+    'tanh': ['x'],
+    'log': ['x'],
+    'log10': ['x'],
+    'exp': ['x'],
   };
 
   private evaluateCall(expr: CallExpression): RageValue {
