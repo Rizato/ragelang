@@ -519,19 +519,56 @@ export class Parser {
           property: { type: 'Identifier', name: name.lexeme },
         };
       } else if (this.match(TokenType.LBRACKET)) {
-        const index = this.expression();
-        this.consume(TokenType.RBRACKET, "Expected ']' after index");
-        expr = {
-          type: 'IndexExpression',
-          object: expr,
-          index,
-        };
+        expr = this.finishIndexOrSlice(expr);
       } else {
         break;
       }
     }
 
     return expr;
+  }
+
+  private finishIndexOrSlice(object: Expression): Expression {
+    // Check for slice notation: [start:end], [:end], [start:], [:]
+    // vs regular index: [index]
+    
+    let start: Expression | null = null;
+    let end: Expression | null = null;
+    let isSlice = false;
+    
+    // Check for [:...] (start is null)
+    if (this.check(TokenType.COLON)) {
+      isSlice = true;
+    } else if (!this.check(TokenType.RBRACKET)) {
+      // Parse the first expression (could be start or index)
+      start = this.expression();
+    }
+    
+    // Check if this is a slice (has colon)
+    if (this.match(TokenType.COLON)) {
+      isSlice = true;
+      // Check for [...:end] or [...:]
+      if (!this.check(TokenType.RBRACKET)) {
+        end = this.expression();
+      }
+    }
+    
+    this.consume(TokenType.RBRACKET, "Expected ']' after index/slice");
+    
+    if (isSlice) {
+      return {
+        type: 'SliceExpression',
+        object,
+        start,
+        end,
+      };
+    } else {
+      return {
+        type: 'IndexExpression',
+        object,
+        index: start!,
+      };
+    }
   }
 
   private finishCall(callee: Expression): CallExpression {

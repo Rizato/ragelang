@@ -213,6 +213,141 @@ export function createBuiltins(renderer: CanvasRenderer): Map<string, BuiltinFun
     return null;
   });
 
+  // sort(arr) - sorts array in place, returns the array
+  builtins.set('sort', (arr: RageValue) => {
+    if (Array.isArray(arr)) {
+      arr.sort((a, b) => {
+        // Handle different types
+        if (typeof a === 'number' && typeof b === 'number') {
+          return a - b;
+        }
+        return String(a).localeCompare(String(b));
+      });
+      return arr;
+    }
+    return null;
+  });
+
+  // sorted(arr) - returns a new sorted array (doesn't modify original)
+  builtins.set('sorted', (arr: RageValue) => {
+    if (Array.isArray(arr)) {
+      const copy = [...arr];
+      copy.sort((a, b) => {
+        if (typeof a === 'number' && typeof b === 'number') {
+          return a - b;
+        }
+        return String(a).localeCompare(String(b));
+      });
+      return copy;
+    }
+    return null;
+  });
+
+  // reverse(arr) - reverses array in place, returns the array
+  builtins.set('reverse', (arr: RageValue) => {
+    if (Array.isArray(arr)) {
+      arr.reverse();
+      return arr;
+    }
+    return null;
+  });
+
+  // reversed(arr) - returns a new reversed array
+  builtins.set('reversed', (arr: RageValue) => {
+    if (Array.isArray(arr)) {
+      return [...arr].reverse();
+    }
+    return null;
+  });
+
+  // slice(arr, start, end) - returns a slice of the array
+  builtins.set('slice', (arr: RageValue, start: RageValue = 0, end: RageValue = null) => {
+    if (Array.isArray(arr)) {
+      const s = Number(start) | 0;
+      const e = end === null ? arr.length : Number(end) | 0;
+      return arr.slice(s, e);
+    }
+    if (typeof arr === 'string') {
+      const s = Number(start) | 0;
+      const e = end === null ? arr.length : Number(end) | 0;
+      return arr.slice(s, e);
+    }
+    return null;
+  });
+
+  // index(arr, value) - returns index of value, or -1 if not found
+  builtins.set('index', (arr: RageValue, value: RageValue) => {
+    if (Array.isArray(arr)) {
+      return arr.indexOf(value);
+    }
+    if (typeof arr === 'string' && typeof value === 'string') {
+      return arr.indexOf(value);
+    }
+    return -1;
+  });
+
+  // contains(arr, value) - returns true if value is in arr
+  builtins.set('contains', (arr: RageValue, value: RageValue) => {
+    if (Array.isArray(arr)) {
+      return arr.includes(value);
+    }
+    if (typeof arr === 'string' && typeof value === 'string') {
+      return arr.includes(value);
+    }
+    return false;
+  });
+
+  // insert(arr, index, value) - inserts value at index
+  builtins.set('insert', (arr: RageValue, idx: RageValue, value: RageValue) => {
+    if (Array.isArray(arr)) {
+      const i = Number(idx) | 0;
+      arr.splice(i, 0, value);
+      return arr.length;
+    }
+    return null;
+  });
+
+  // remove(arr, value) - removes first occurrence of value
+  builtins.set('remove', (arr: RageValue, value: RageValue) => {
+    if (Array.isArray(arr)) {
+      const idx = arr.indexOf(value);
+      if (idx !== -1) {
+        arr.splice(idx, 1);
+        return true;
+      }
+      return false;
+    }
+    return false;
+  });
+
+  // extend(arr, other) - adds all elements from other to arr
+  builtins.set('extend', (arr: RageValue, other: RageValue) => {
+    if (Array.isArray(arr) && Array.isArray(other)) {
+      arr.push(...other);
+      return arr.length;
+    }
+    return null;
+  });
+
+  // count(arr, value) - counts occurrences of value
+  builtins.set('count', (arr: RageValue, value: RageValue) => {
+    if (Array.isArray(arr)) {
+      return arr.filter(x => x === value).length;
+    }
+    if (typeof arr === 'string' && typeof value === 'string') {
+      return arr.split(value).length - 1;
+    }
+    return 0;
+  });
+
+  // join(arr, separator) - joins array elements into a string
+  builtins.set('join', (arr: RageValue, sep: RageValue = ',') => {
+    if (Array.isArray(arr)) {
+      return arr.map(x => String(x)).join(String(sep));
+    }
+    return '';
+  });
+
   // Time helpers (for animations)
   builtins.set('time', () => performance.now() / 1000);
 

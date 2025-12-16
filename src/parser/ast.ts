@@ -21,6 +21,7 @@ export type ASTNode =
   | CallExpression
   | MemberExpression
   | IndexExpression
+  | SliceExpression
   | Identifier
   | NumberLiteral
   | StringLiteral
@@ -55,6 +56,7 @@ export type Expression =
   | CallExpression
   | MemberExpression
   | IndexExpression
+  | SliceExpression
   | Identifier
   | NumberLiteral
   | StringLiteral
@@ -154,6 +156,14 @@ export interface IndexExpression {
   type: 'IndexExpression';
   object: Expression;
   index: Expression;
+}
+
+// Slice expression: arr[start:end] or arr[start:] or arr[:end] or arr[:]
+export interface SliceExpression {
+  type: 'SliceExpression';
+  object: Expression;
+  start: Expression | null;  // null means from beginning
+  end: Expression | null;    // null means to end
 }
 
 export interface Identifier {

@@ -817,5 +817,239 @@ msg3 = get_message(GameOver(100))
     expect(env.get('msg2')).toBe('Running at speed');
     expect(env.get('msg3')).toBe('Game over!');
   });
+
+  // Python-like array builtin tests
+  it('should sort array in place', () => {
+    const interpreter = runProgram(`
+arr = [3, 1, 4, 1, 5, 9, 2, 6]
+sort(arr)
+first = arr[0]
+last = arr[7]
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('first')).toBe(1);
+    expect(env.get('last')).toBe(9);
+  });
+
+  it('should return sorted copy with sorted()', () => {
+    const interpreter = runProgram(`
+arr = [3, 1, 2]
+sorted_arr = sorted(arr)
+original_first = arr[0]
+sorted_first = sorted_arr[0]
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('original_first')).toBe(3);  // Original unchanged
+    expect(env.get('sorted_first')).toBe(1);    // Sorted copy
+  });
+
+  it('should reverse array in place', () => {
+    const interpreter = runProgram(`
+arr = [1, 2, 3]
+reverse(arr)
+first = arr[0]
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('first')).toBe(3);
+  });
+
+  it('should return reversed copy with reversed()', () => {
+    const interpreter = runProgram(`
+arr = [1, 2, 3]
+rev = reversed(arr)
+original = arr[0]
+reversed_first = rev[0]
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('original')).toBe(1);
+    expect(env.get('reversed_first')).toBe(3);
+  });
+
+  it('should slice arrays', () => {
+    const interpreter = runProgram(`
+arr = [0, 1, 2, 3, 4]
+sliced = slice(arr, 1, 4)
+result = len(sliced)
+first = sliced[0]
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(3);
+    expect(env.get('first')).toBe(1);
+  });
+
+  it('should find index of element', () => {
+    const interpreter = runProgram(`
+arr = ["a", "b", "c", "d"]
+idx = index(arr, "c")
+missing = index(arr, "z")
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('idx')).toBe(2);
+    expect(env.get('missing')).toBe(-1);
+  });
+
+  it('should check if array contains element', () => {
+    const interpreter = runProgram(`
+arr = [1, 2, 3]
+has2 = contains(arr, 2)
+has9 = contains(arr, 9)
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('has2')).toBe(true);
+    expect(env.get('has9')).toBe(false);
+  });
+
+  it('should insert element at index', () => {
+    const interpreter = runProgram(`
+arr = [1, 2, 4]
+insert(arr, 2, 3)
+third = arr[2]
+length = len(arr)
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('third')).toBe(3);
+    expect(env.get('length')).toBe(4);
+  });
+
+  it('should remove first occurrence', () => {
+    const interpreter = runProgram(`
+arr = [1, 2, 3, 2]
+removed = remove(arr, 2)
+length = len(arr)
+second = arr[1]
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('removed')).toBe(true);
+    expect(env.get('length')).toBe(3);
+    expect(env.get('second')).toBe(3);  // 2 was removed, so 3 shifted
+  });
+
+  it('should extend array with another', () => {
+    const interpreter = runProgram(`
+arr = [1, 2]
+extend(arr, [3, 4, 5])
+length = len(arr)
+last = arr[4]
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('length')).toBe(5);
+    expect(env.get('last')).toBe(5);
+  });
+
+  it('should count occurrences', () => {
+    const interpreter = runProgram(`
+arr = [1, 2, 2, 3, 2, 4]
+twos = count(arr, 2)
+fives = count(arr, 5)
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('twos')).toBe(3);
+    expect(env.get('fives')).toBe(0);
+  });
+
+  it('should join array elements', () => {
+    const interpreter = runProgram(`
+arr = ["a", "b", "c"]
+result = join(arr, "-")
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe('a-b-c');
+  });
+
+  // Python-like slice notation tests
+  it('should slice array with start:end', () => {
+    const interpreter = runProgram(`
+arr = [0, 1, 2, 3, 4, 5]
+result = arr[1:4]
+len_result = len(result)
+first = result[0]
+last = result[2]
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('len_result')).toBe(3);
+    expect(env.get('first')).toBe(1);
+    expect(env.get('last')).toBe(3);
+  });
+
+  it('should slice array with start:', () => {
+    const interpreter = runProgram(`
+arr = [0, 1, 2, 3, 4]
+result = arr[2:]
+first = result[0]
+length = len(result)
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('first')).toBe(2);
+    expect(env.get('length')).toBe(3);
+  });
+
+  it('should slice array with :end', () => {
+    const interpreter = runProgram(`
+arr = [0, 1, 2, 3, 4]
+result = arr[:3]
+length = len(result)
+last = result[2]
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('length')).toBe(3);
+    expect(env.get('last')).toBe(2);
+  });
+
+  it('should slice array with [:]', () => {
+    const interpreter = runProgram(`
+arr = [1, 2, 3]
+result = arr[:]
+length = len(result)
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('length')).toBe(3);
+  });
+
+  it('should handle negative indices in slice', () => {
+    const interpreter = runProgram(`
+arr = [0, 1, 2, 3, 4]
+result = arr[1:-1]
+length = len(result)
+first = result[0]
+last = result[2]
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('length')).toBe(3);
+    expect(env.get('first')).toBe(1);
+    expect(env.get('last')).toBe(3);
+  });
+
+  it('should handle negative index for regular access', () => {
+    const interpreter = runProgram(`
+arr = [0, 1, 2, 3, 4]
+last = arr[-1]
+second_last = arr[-2]
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('last')).toBe(4);
+    expect(env.get('second_last')).toBe(3);
+  });
+
+  it('should slice strings', () => {
+    const interpreter = runProgram(`
+s = "hello world"
+result = s[0:5]
+from_middle = s[6:]
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe('hello');
+    expect(env.get('from_middle')).toBe('world');
+  });
+
+  it('should handle negative string indices', () => {
+    const interpreter = runProgram(`
+s = "hello"
+last = s[-1]
+slice_neg = s[-3:]
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('last')).toBe('o');
+    expect(env.get('slice_neg')).toBe('llo');
+  });
 });
 

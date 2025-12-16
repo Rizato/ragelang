@@ -17,6 +17,7 @@ import type {
   CallExpression,
   MemberExpression,
   IndexExpression,
+  SliceExpression,
   ArrayLiteral,
   ObjectLiteral,
   MatchExpression,
@@ -358,6 +359,8 @@ export class Interpreter {
         return this.evaluateMember(expr as MemberExpression);
       case 'IndexExpression':
         return this.evaluateIndex(expr as IndexExpression);
+      case 'SliceExpression':
+        return this.evaluateSlice(expr as SliceExpression);
       case 'AssignmentExpression':
         return this.evaluateAssignment(expr as AssignmentExpression);
       default:
@@ -635,12 +638,15 @@ export class Interpreter {
     const index = this.evaluate(expr.index);
 
     if (Array.isArray(object)) {
-      const idx = Number(index) | 0;
+      let idx = Number(index) | 0;
+      // Support negative indexing like Python
+      if (idx < 0) idx = object.length + idx;
       return object[idx] ?? null;
     }
 
     if (typeof object === 'string') {
-      const idx = Number(index) | 0;
+      let idx = Number(index) | 0;
+      if (idx < 0) idx = object.length + idx;
       return object[idx] ?? null;
     }
 
@@ -649,6 +655,39 @@ export class Interpreter {
     }
 
     throw new Error('Can only index into arrays, strings, or prototypes');
+  }
+
+  private evaluateSlice(expr: SliceExpression): RageValue {
+    const object = this.evaluate(expr.object);
+    const startVal = expr.start ? this.evaluate(expr.start) : null;
+    const endVal = expr.end ? this.evaluate(expr.end) : null;
+
+    // Helper to normalize index (handle negative values)
+    const normalizeIndex = (idx: number | null, length: number, isEnd: boolean): number => {
+      if (idx === null) {
+        return isEnd ? length : 0;
+      }
+      let n = idx | 0;
+      if (n < 0) {
+        n = length + n;
+      }
+      // Clamp to valid range
+      return Math.max(0, Math.min(length, n));
+    };
+
+    if (Array.isArray(object)) {
+      const start = normalizeIndex(startVal !== null ? Number(startVal) : null, object.length, false);
+      const end = normalizeIndex(endVal !== null ? Number(endVal) : null, object.length, true);
+      return object.slice(start, end);
+    }
+
+    if (typeof object === 'string') {
+      const start = normalizeIndex(startVal !== null ? Number(startVal) : null, object.length, false);
+      const end = normalizeIndex(endVal !== null ? Number(endVal) : null, object.length, true);
+      return object.slice(start, end);
+    }
+
+    throw new Error('Can only slice arrays or strings');
   }
 
   private evaluateAssignment(expr: AssignmentExpression): RageValue {
