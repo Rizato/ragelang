@@ -3,6 +3,7 @@ import { Lexer } from '../lexer/lexer.js';
 import { Parser } from '../parser/parser.js';
 import { Interpreter } from './interpreter.js';
 import { CanvasRenderer } from '../renderer/canvas.js';
+import { RagePrototype } from './builtins.js';
 
 function createInterpreter() {
   const renderer = new CanvasRenderer(null, { width: 800, height: 600 });
@@ -1121,6 +1122,360 @@ result = len(arr)
 `);
     const env = interpreter.getEnvironment();
     expect(env.get('result')).toBe(64);
+  });
+
+  // ============ NEW TRIG FUNCTIONS ============
+
+  it('should compute inverse trig functions', () => {
+    const interpreter = runProgram(`
+a = asin(0.5)
+b = acos(0.5)
+c = atan(1)
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('a')).toBeCloseTo(Math.asin(0.5), 10);
+    expect(env.get('b')).toBeCloseTo(Math.acos(0.5), 10);
+    expect(env.get('c')).toBeCloseTo(Math.atan(1), 10);
+  });
+
+  it('should compute hyperbolic trig functions', () => {
+    const interpreter = runProgram(`
+a = sinh(1)
+b = cosh(1)
+c = tanh(1)
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('a')).toBeCloseTo(Math.sinh(1), 10);
+    expect(env.get('b')).toBeCloseTo(Math.cosh(1), 10);
+    expect(env.get('c')).toBeCloseTo(Math.tanh(1), 10);
+  });
+
+  it('should provide math constants', () => {
+    const interpreter = runProgram(`
+pi = PI()
+tau = TAU()
+e = E()
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('pi')).toBeCloseTo(Math.PI, 10);
+    expect(env.get('tau')).toBeCloseTo(Math.PI * 2, 10);
+    expect(env.get('e')).toBeCloseTo(Math.E, 10);
+  });
+
+  it('should convert between degrees and radians', () => {
+    const interpreter = runProgram(`
+r = rad(180)
+d = deg(r)
+quarter = rad(90)
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('r')).toBeCloseTo(Math.PI, 10);
+    expect(env.get('d')).toBeCloseTo(180, 10);
+    expect(env.get('quarter')).toBeCloseTo(Math.PI / 2, 10);
+  });
+
+  it('should compute logarithms', () => {
+    const interpreter = runProgram(`
+ln_e = log(E())
+log10_100 = log10(100)
+exp_1 = exp(1)
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('ln_e')).toBeCloseTo(1, 10);
+    expect(env.get('log10_100')).toBeCloseTo(2, 10);
+    expect(env.get('exp_1')).toBeCloseTo(Math.E, 10);
+  });
+
+  it('should use trig for circular motion', () => {
+    const interpreter = runProgram(`
+angle = rad(45)
+radius = 100
+x = cos(angle) * radius
+y = sin(angle) * radius
+`);
+    const env = interpreter.getEnvironment();
+    const expected = 100 * Math.cos(Math.PI / 4);
+    expect(env.get('x')).toBeCloseTo(expected, 10);
+    expect(env.get('y')).toBeCloseTo(expected, 10);
+  });
+
+  // ============ INPUT BUFFER TESTS ============
+  // Note: These test the buffer logic, not actual input events
+
+  it('should have buffer_input function available', () => {
+    // This tests that the function exists and doesn't throw
+    const interpreter = runProgram(`
+buffer_input("jump", 0.1)
+result = true
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+  });
+
+  it('should have check_buffer function available', () => {
+    const interpreter = runProgram(`
+result = check_buffer("jump")
+`);
+    const env = interpreter.getEnvironment();
+    // Should return false since nothing was buffered in same frame
+    expect(env.get('result')).toBe(false);
+  });
+
+  it('should have peek_buffer function available', () => {
+    const interpreter = runProgram(`
+result = peek_buffer("action")
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(false);
+  });
+
+  it('should have clear_buffer function available', () => {
+    const interpreter = runProgram(`
+clear_buffer("jump")
+result = true
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+  });
+
+  it('should have clear_all_buffers function available', () => {
+    const interpreter = runProgram(`
+clear_all_buffers()
+result = true
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+  });
+
+  it('should have buffer_time function available', () => {
+    const interpreter = runProgram(`
+result = buffer_time("jump")
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(0);
+  });
+
+  // ============ INPUT FUNCTIONS ============
+  // Note: These test that functions exist, not actual input
+
+  it('should have pressed function available', () => {
+    const interpreter = runProgram(`
+result = pressed("jump")
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(false);
+  });
+
+  it('should have held function available', () => {
+    const interpreter = runProgram(`
+result = held("left")
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(false);
+  });
+
+  it('should have released function available', () => {
+    const interpreter = runProgram(`
+result = released("action")
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(false);
+  });
+
+  it('should have key input functions available', () => {
+    const interpreter = runProgram(`
+p = key_pressed("space")
+h = key_held("a")
+r = key_released("enter")
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('p')).toBe(false);
+    expect(env.get('h')).toBe(false);
+    expect(env.get('r')).toBe(false);
+  });
+
+  it('should have mouse position functions available', () => {
+    const interpreter = runProgram(`
+x = mouse_x()
+y = mouse_y()
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('x')).toBe(0);
+    expect(env.get('y')).toBe(0);
+  });
+
+  it('should have mouse button functions available', () => {
+    const interpreter = runProgram(`
+p = mouse_pressed(0)
+h = mouse_held(0)
+r = mouse_released(0)
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('p')).toBe(false);
+    expect(env.get('h')).toBe(false);
+    expect(env.get('r')).toBe(false);
+  });
+
+  it('should have touch functions available', () => {
+    const interpreter = runProgram(`
+count = touch_count()
+x = touch_x(0)
+y = touch_y(0)
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('count')).toBe(0);
+    expect(env.get('x')).toBe(0);
+    expect(env.get('y')).toBe(0);
+  });
+
+  // ============ AUDIO FUNCTIONS ============
+  // Note: These test that functions exist and don't throw
+
+  it('should have music function available', () => {
+    const interpreter = runProgram(`
+music("")
+result = true
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+  });
+
+  it('should have stop_music function available', () => {
+    const interpreter = runProgram(`
+stop_music()
+result = true
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+  });
+
+  it('should have music_volume function available', () => {
+    const interpreter = runProgram(`
+music_volume(5)
+result = true
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+  });
+
+  it('should have sound function available', () => {
+    const interpreter = runProgram(`
+sound("", 5)
+result = true
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+  });
+
+  it('should have stop_sounds function available', () => {
+    const interpreter = runProgram(`
+stop_sounds()
+result = true
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+  });
+
+  it('should have master_volume function available', () => {
+    const interpreter = runProgram(`
+master_volume(7)
+result = true
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+  });
+
+  // ============ SPRITE SHEET FUNCTION ============
+
+  it('should have sprite function with all parameters', () => {
+    // Test that sprite accepts all parameters without error
+    const interpreter = runProgram(`
+// sprite(path, x, y, width, height, sx, sy, sw, sh, color)
+// Using empty path draws a colored rectangle
+sprite("", 100, 100, 32, 32, 0, 0, 32, 32, "#ff0000")
+result = true
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+  });
+
+  it('should support sprite with keyword arguments', () => {
+    const interpreter = runProgram(`
+sprite("", 50, 50, width=64, height=64, color="#00ff00")
+result = true
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+  });
+
+  // ============ COMPREHENSIVE PLATFORMER EXAMPLE ============
+
+  it('should support a complete platformer pattern', () => {
+    const interpreter = runProgram(`
+// Simulate a platformer state
+player = {
+  x: 100,
+  y: 300,
+  vel_y: 0,
+  grounded: false
+}
+
+// Gravity constant
+gravity = 800
+jump_force = -400
+
+// Simulate physics update (dt = 0.016 for 60fps)
+dt = 0.016
+
+// Run physics until we hit ground (simulate multiple frames)
+loop {
+  // Apply gravity
+  player.vel_y = player.vel_y + gravity * dt
+  player.y = player.y + player.vel_y * dt
+
+  // Ground collision at y=350
+  if (player.y >= 350) {
+    player.y = 350
+    player.vel_y = 0
+    player.grounded = true
+    break
+  }
+}
+
+// Calculate angle for projectile
+angle = rad(45)
+speed = 200
+proj_vx = cos(angle) * speed
+proj_vy = sin(angle) * speed
+
+// Use lerp for smooth movement
+start_pos = 0
+end_pos = 100
+t = 0.5
+smooth_pos = lerp(start_pos, end_pos, t)
+
+// Clamp a value
+raw_value = 150
+clamped = clamp(raw_value, 0, 100)
+`);
+    const env = interpreter.getEnvironment();
+    
+    // Physics worked - player landed on ground
+    const player = env.get('player') as RagePrototype;
+    expect(player.y).toBe(350);
+    expect(player.grounded).toBe(true);
+    expect(player.vel_y).toBe(0);
+    
+    // Trig worked
+    const expectedV = Math.cos(Math.PI / 4) * 200;
+    expect(env.get('proj_vx')).toBeCloseTo(expectedV, 5);
+    expect(env.get('proj_vy')).toBeCloseTo(expectedV, 5);
+    
+    // Lerp worked
+    expect(env.get('smooth_pos')).toBe(50);
+    
+    // Clamp worked
+    expect(env.get('clamped')).toBe(100);
   });
 });
 
