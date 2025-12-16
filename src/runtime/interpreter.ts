@@ -584,6 +584,11 @@ export class Interpreter {
     'slice': ['arr', 'start', 'end'],
     'join': ['arr', 'separator'],
     'array': ['size'],
+    // Audio
+    'music': ['path', 'volume'],
+    'music_volume': ['volume'],
+    'sound': ['path', 'gain'],
+    'master_volume': ['volume'],
   };
 
   private evaluateCall(expr: CallExpression): RageValue {

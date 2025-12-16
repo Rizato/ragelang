@@ -12,6 +12,7 @@ export * from './parser/ast.js';
 export { FallingProcessor } from './falling/processor.js';
 export { Interpreter } from './runtime/interpreter.js';
 export { CanvasRenderer } from './renderer/canvas.js';
+export { AudioManager } from './audio/audio.js';
 
 import { FallingProcessor } from './falling/processor.js';
 import { Lexer } from './lexer/lexer.js';

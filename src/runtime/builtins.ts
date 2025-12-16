@@ -1,4 +1,5 @@
 import { CanvasRenderer } from '../renderer/canvas.js';
+import { AudioManager } from '../audio/audio.js';
 
 /**
  * Built-in functions for Ragelang
@@ -55,8 +56,11 @@ export interface RagePrototype {
   [key: string]: RageValue;
 }
 
-export function createBuiltins(renderer: CanvasRenderer): Map<string, BuiltinFunction> {
+export function createBuiltins(renderer: CanvasRenderer, audio?: AudioManager): Map<string, BuiltinFunction> {
   const builtins = new Map<string, BuiltinFunction>();
+  
+  // Audio manager (created lazily if not provided)
+  const audioManager = audio ?? new AudioManager();
 
   // Drawing functions
   // text(text, x, y, size, color)
@@ -362,6 +366,49 @@ export function createBuiltins(renderer: CanvasRenderer): Map<string, BuiltinFun
 
   // Time helpers (for animations)
   builtins.set('time', () => performance.now() / 1000);
+
+  // Audio functions
+  // music(path, volume) - plays looping background music
+  // path: audio file path (null to stop)
+  // volume: 0-10 (default 5)
+  builtins.set('music', (path: RageValue = null, volume: RageValue = 5) => {
+    audioManager.music(path ? String(path) : null, Number(volume));
+    return null;
+  });
+
+  // stop_music() - stops the current music
+  builtins.set('stop_music', () => {
+    audioManager.stopMusic();
+    return null;
+  });
+
+  // music_volume(volume) - sets music volume
+  builtins.set('music_volume', (volume: RageValue) => {
+    audioManager.setMusicVolume(Number(volume));
+    return null;
+  });
+
+  // sound(path, gain) - plays a one-shot sound effect
+  // path: audio file path
+  // gain: 0-10 (default 5)
+  builtins.set('sound', (path: RageValue, gain: RageValue = 5) => {
+    if (path) {
+      audioManager.sound(String(path), Number(gain));
+    }
+    return null;
+  });
+
+  // stop_sounds() - stops all currently playing sounds
+  builtins.set('stop_sounds', () => {
+    audioManager.stopAllSounds();
+    return null;
+  });
+
+  // master_volume(volume) - sets master volume for all audio
+  builtins.set('master_volume', (volume: RageValue) => {
+    audioManager.setMasterVolume(Number(volume));
+    return null;
+  });
 
   return builtins;
 }
