@@ -1,5 +1,6 @@
 import { CanvasRenderer } from '../renderer/canvas.js';
 import { AudioManager } from '../audio/audio.js';
+import { InputManager } from '../input/input.js';
 
 /**
  * Built-in functions for Ragelang
@@ -56,11 +57,18 @@ export interface RagePrototype {
   [key: string]: RageValue;
 }
 
-export function createBuiltins(renderer: CanvasRenderer, audio?: AudioManager): Map<string, BuiltinFunction> {
+export function createBuiltins(
+  renderer: CanvasRenderer, 
+  audio?: AudioManager,
+  input?: InputManager
+): Map<string, BuiltinFunction> {
   const builtins = new Map<string, BuiltinFunction>();
   
   // Audio manager (created lazily if not provided)
   const audioManager = audio ?? new AudioManager();
+  
+  // Input manager (created lazily if not provided)
+  const inputManager = input ?? new InputManager();
 
   // Drawing functions
   // text(text, x, y, size, color)
@@ -408,6 +416,81 @@ export function createBuiltins(renderer: CanvasRenderer, audio?: AudioManager): 
   builtins.set('master_volume', (volume: RageValue) => {
     audioManager.setMasterVolume(Number(volume));
     return null;
+  });
+
+  // ============ Input Functions ============
+  
+  // pressed(action) - returns true on the frame an action starts
+  // Actions: "left", "right", "up", "down", "jump", "action", "a", "b", "start", "select"
+  builtins.set('pressed', (action: RageValue) => {
+    return inputManager.pressed(String(action));
+  });
+
+  // held(action) - returns true while an action is held
+  builtins.set('held', (action: RageValue) => {
+    return inputManager.held(String(action));
+  });
+
+  // released(action) - returns true on the frame an action ends
+  builtins.set('released', (action: RageValue) => {
+    return inputManager.released(String(action));
+  });
+
+  // key_pressed(key) - returns true if specific key was just pressed
+  builtins.set('key_pressed', (key: RageValue) => {
+    return inputManager.keyPressed(String(key));
+  });
+
+  // key_held(key) - returns true while specific key is held
+  builtins.set('key_held', (key: RageValue) => {
+    return inputManager.keyHeld(String(key));
+  });
+
+  // key_released(key) - returns true if specific key was just released
+  builtins.set('key_released', (key: RageValue) => {
+    return inputManager.keyReleased(String(key));
+  });
+
+  // mouse_x() - returns mouse/touch X position
+  builtins.set('mouse_x', () => {
+    return inputManager.getMouseX();
+  });
+
+  // mouse_y() - returns mouse/touch Y position
+  builtins.set('mouse_y', () => {
+    return inputManager.getMouseY();
+  });
+
+  // mouse_pressed(button) - returns true if mouse button just pressed (0=left, 1=middle, 2=right)
+  builtins.set('mouse_pressed', (button: RageValue = 0) => {
+    return inputManager.mousePressed(Number(button) | 0);
+  });
+
+  // mouse_held(button) - returns true while mouse button is held
+  builtins.set('mouse_held', (button: RageValue = 0) => {
+    return inputManager.mouseHeld(Number(button) | 0);
+  });
+
+  // mouse_released(button) - returns true if mouse button just released
+  builtins.set('mouse_released', (button: RageValue = 0) => {
+    return inputManager.mouseReleased(Number(button) | 0);
+  });
+
+  // touch_count() - returns number of active touches
+  builtins.set('touch_count', () => {
+    return inputManager.getTouchCount();
+  });
+
+  // touch_x(index) - returns X position of touch at index
+  builtins.set('touch_x', (index: RageValue = 0) => {
+    const pos = inputManager.getTouchPosition(Number(index) | 0);
+    return pos ? pos.x : 0;
+  });
+
+  // touch_y(index) - returns Y position of touch at index
+  builtins.set('touch_y', (index: RageValue = 0) => {
+    const pos = inputManager.getTouchPosition(Number(index) | 0);
+    return pos ? pos.y : 0;
   });
 
   return builtins;

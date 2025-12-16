@@ -28,6 +28,7 @@ import type {
   BooleanLiteral,
 } from '../parser/ast.js';
 import { CanvasRenderer } from '../renderer/canvas.js';
+import { InputManager } from '../input/input.js';
 import {
   type RageValue,
   type RageFunction,
@@ -112,6 +113,7 @@ export class Interpreter {
   private globalEnv: Environment;
   private currentEnv: Environment;
   private builtins: Map<string, BuiltinFunction>;
+  private inputManager: InputManager;
   
   private drawBlock: DrawBlock | null = null;
   private updateBlock: UpdateBlock | null = null;
@@ -119,10 +121,20 @@ export class Interpreter {
   private lastTime: number = 0;
   private running: boolean = false;
 
-  constructor(renderer: CanvasRenderer) {
+  constructor(renderer: CanvasRenderer, inputManager?: InputManager) {
     this.globalEnv = new Environment();
     this.currentEnv = this.globalEnv;
-    this.builtins = createBuiltins(renderer);
+    
+    // Create or use provided input manager
+    this.inputManager = inputManager ?? new InputManager();
+    
+    // If we have a canvas from the renderer, set it for input
+    const ctx = renderer.getContext();
+    if (ctx?.canvas) {
+      this.inputManager.setCanvas(ctx.canvas);
+    }
+    
+    this.builtins = createBuiltins(renderer, undefined, this.inputManager);
 
     // Add builtins to global environment
     for (const [name, fn] of this.builtins) {
@@ -166,6 +178,9 @@ export class Interpreter {
     const currentTime = performance.now();
     const dt = (currentTime - this.lastTime) / 1000; // Convert to seconds
     this.lastTime = currentTime;
+
+    // Update input state at start of frame
+    this.inputManager.update();
 
     // Execute update block if it exists
     if (this.updateBlock) {
@@ -589,6 +604,18 @@ export class Interpreter {
     'music_volume': ['volume'],
     'sound': ['path', 'gain'],
     'master_volume': ['volume'],
+    // Input
+    'pressed': ['action'],
+    'held': ['action'],
+    'released': ['action'],
+    'key_pressed': ['key'],
+    'key_held': ['key'],
+    'key_released': ['key'],
+    'mouse_pressed': ['button'],
+    'mouse_held': ['button'],
+    'mouse_released': ['button'],
+    'touch_x': ['index'],
+    'touch_y': ['index'],
   };
 
   private evaluateCall(expr: CallExpression): RageValue {
