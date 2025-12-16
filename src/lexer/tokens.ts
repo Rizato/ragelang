@@ -10,16 +10,21 @@ export enum TokenType {
   // Keywords
   DRAW = 'DRAW',
   UPDATE = 'UPDATE',
+  FUN = 'FUN',
+  RETURN = 'RETURN',
   IF = 'IF',
   ELSE = 'ELSE',
+  LOOP = 'LOOP',
+  BREAK = 'BREAK',
   TRUE = 'TRUE',
   FALSE = 'FALSE',
   PROTOTYPE = 'PROTOTYPE',
   
-  // Operators
+  // Arithmetic Operators
   PLUS = 'PLUS',
   MINUS = 'MINUS',
   STAR = 'STAR',
+  STAR_STAR = 'STAR_STAR',       // **
   SLASH = 'SLASH',
   PERCENT = 'PERCENT',
   
@@ -34,8 +39,18 @@ export enum TokenType {
   GREATER_EQUAL = 'GREATER_EQUAL',
   
   // Logical
-  AND = 'AND',
-  OR = 'OR',
+  AND = 'AND',                    // 'and' keyword
+  OR = 'OR',                      // 'or' keyword
+  AMPERSAND_AMPERSAND = 'AMPERSAND_AMPERSAND',  // &&
+  PIPE_PIPE = 'PIPE_PIPE',        // ||
+  
+  // Bitwise
+  AMPERSAND = 'AMPERSAND',        // &
+  PIPE = 'PIPE',                  // |
+  CARET = 'CARET',                // ^
+  TILDE = 'TILDE',                // ~
+  LESS_LESS = 'LESS_LESS',        // <<
+  GREATER_GREATER = 'GREATER_GREATER',  // >>
   
   // Delimiters
   LPAREN = 'LPAREN',
@@ -47,6 +62,7 @@ export enum TokenType {
   COMMA = 'COMMA',
   DOT = 'DOT',
   SEMICOLON = 'SEMICOLON',
+  COLON = 'COLON',
   
   // Special
   FOUNDATION = 'FOUNDATION',
@@ -66,12 +82,15 @@ export interface Token {
 export const KEYWORDS: Record<string, TokenType> = {
   'draw': TokenType.DRAW,
   'update': TokenType.UPDATE,
+  'fun': TokenType.FUN,
+  'return': TokenType.RETURN,
   'if': TokenType.IF,
   'else': TokenType.ELSE,
+  'loop': TokenType.LOOP,
+  'break': TokenType.BREAK,
   'true': TokenType.TRUE,
   'false': TokenType.FALSE,
   'prototype': TokenType.PROTOTYPE,
   'and': TokenType.AND,
   'or': TokenType.OR,
 };
-

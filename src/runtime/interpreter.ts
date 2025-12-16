@@ -1,18 +1,22 @@
-import {
+import type {
   Program,
   Statement,
   Expression,
   DrawBlock,
   UpdateBlock,
+  FunctionDeclaration,
+  ReturnStatement,
   IfStatement,
+  LoopStatement,
   BlockStatement,
-  ExpressionStatement,
   VariableDeclaration,
   AssignmentExpression,
   BinaryExpression,
   UnaryExpression,
   CallExpression,
   MemberExpression,
+  IndexExpression,
+  ArrayLiteral,
   Identifier,
   NumberLiteral,
   StringLiteral,
@@ -20,13 +24,32 @@ import {
 } from '../parser/ast.js';
 import { CanvasRenderer } from '../renderer/canvas.js';
 import {
-  RageValue,
-  RagePrototype,
-  BuiltinFunction,
+  type RageValue,
+  type RageFunction,
+  type BuiltinFunction,
   createBuiltins,
   createPrototype,
   isPrototype,
 } from './builtins.js';
+
+/**
+ * Return exception for unwinding the call stack
+ */
+class ReturnException {
+  constructor(public value: RageValue) {}
+}
+
+/**
+ * Break exception for exiting loops
+ */
+class BreakException {}
+
+function isRageFunction(value: RageValue): value is RageFunction {
+  return typeof value === 'object' && 
+         value !== null && 
+         !Array.isArray(value) &&
+         (value as RageFunction).__type === 'function';
+}
 
 /**
  * Environment for variable scoping
@@ -79,7 +102,6 @@ class Environment {
 export class Interpreter {
   private globalEnv: Environment;
   private currentEnv: Environment;
-  private renderer: CanvasRenderer;
   private builtins: Map<string, BuiltinFunction>;
   
   private drawBlock: DrawBlock | null = null;
@@ -89,7 +111,6 @@ export class Interpreter {
   private running: boolean = false;
 
   constructor(renderer: CanvasRenderer) {
-    this.renderer = renderer;
     this.globalEnv = new Environment();
     this.currentEnv = this.globalEnv;
     this.builtins = createBuiltins(renderer);
@@ -143,7 +164,11 @@ export class Interpreter {
       updateEnv.define(this.updateBlock.parameter, dt);
       const prevEnv = this.currentEnv;
       this.currentEnv = updateEnv;
-      this.executeBlock(this.updateBlock.body);
+      try {
+        this.executeBlock(this.updateBlock.body);
+      } catch (e) {
+        if (!(e instanceof ReturnException)) throw e;
+      }
       this.currentEnv = prevEnv;
     }
 
@@ -152,7 +177,11 @@ export class Interpreter {
       const drawEnv = new Environment(this.globalEnv);
       const prevEnv = this.currentEnv;
       this.currentEnv = drawEnv;
-      this.executeBlock(this.drawBlock.body);
+      try {
+        this.executeBlock(this.drawBlock.body);
+      } catch (e) {
+        if (!(e instanceof ReturnException)) throw e;
+      }
       this.currentEnv = prevEnv;
     }
 
@@ -167,8 +196,20 @@ export class Interpreter {
       case 'UpdateBlock':
         this.updateBlock = stmt;
         break;
+      case 'FunctionDeclaration':
+        this.executeFunctionDeclaration(stmt);
+        break;
+      case 'ReturnStatement':
+        this.executeReturn(stmt);
+        break;
       case 'IfStatement':
         this.executeIf(stmt);
+        break;
+      case 'LoopStatement':
+        this.executeLoop(stmt);
+        break;
+      case 'BreakStatement':
+        throw new BreakException();
         break;
       case 'BlockStatement':
         this.executeBlock(stmt);
@@ -182,17 +223,47 @@ export class Interpreter {
     }
   }
 
+  private executeFunctionDeclaration(stmt: FunctionDeclaration): void {
+    const fn: RageFunction = {
+      __type: 'function',
+      name: stmt.name,
+      parameters: stmt.parameters,
+      body: stmt.body,
+      closure: this.currentEnv,
+    };
+    this.currentEnv.define(stmt.name, fn);
+  }
+
+  private executeReturn(stmt: ReturnStatement): void {
+    const value = stmt.argument ? this.evaluate(stmt.argument) : null;
+    throw new ReturnException(value);
+  }
+
   private executeIf(stmt: IfStatement): void {
     const condition = this.evaluate(stmt.condition);
     
     if (this.isTruthy(condition)) {
-      this.executeBlock(stmt.consequent);
+      // Don't create new scope for if/else blocks - flat scoping
+      this.executeBlockStatements(stmt.consequent);
     } else if (stmt.alternate) {
       if (stmt.alternate.type === 'IfStatement') {
         this.executeIf(stmt.alternate);
       } else {
-        this.executeBlock(stmt.alternate);
+        this.executeBlockStatements(stmt.alternate);
       }
+    }
+  }
+
+  private executeLoop(stmt: LoopStatement): void {
+    try {
+      while (true) {
+        this.executeBlockStatements(stmt.body);
+      }
+    } catch (e) {
+      if (e instanceof BreakException) {
+        return; // Exit the loop
+      }
+      throw e;
     }
   }
 
@@ -201,16 +272,30 @@ export class Interpreter {
     const prevEnv = this.currentEnv;
     this.currentEnv = blockEnv;
 
+    try {
+      for (const stmt of block.body) {
+        this.executeStatement(stmt);
+      }
+    } finally {
+      this.currentEnv = prevEnv;
+    }
+  }
+
+  /**
+   * Execute block statements without creating a new scope
+   * Used for if/else/while blocks where variables should be visible outside
+   */
+  private executeBlockStatements(block: BlockStatement): void {
     for (const stmt of block.body) {
       this.executeStatement(stmt);
     }
-
-    this.currentEnv = prevEnv;
   }
 
   private executeVariableDeclaration(stmt: VariableDeclaration): void {
     const value = this.evaluate(stmt.init);
-    this.currentEnv.define(stmt.name, value);
+    // Use set() instead of define() so that if the variable exists in an
+    // outer scope, it gets updated there instead of creating a new local
+    this.currentEnv.set(stmt.name, value);
   }
 
   private evaluate(expr: Expression): RageValue {
@@ -221,6 +306,8 @@ export class Interpreter {
         return (expr as StringLiteral).value;
       case 'BooleanLiteral':
         return (expr as BooleanLiteral).value;
+      case 'ArrayLiteral':
+        return this.evaluateArrayLiteral(expr as ArrayLiteral);
       case 'Identifier':
         return this.currentEnv.get((expr as Identifier).name);
       case 'PrototypeExpression':
@@ -233,6 +320,8 @@ export class Interpreter {
         return this.evaluateCall(expr as CallExpression);
       case 'MemberExpression':
         return this.evaluateMember(expr as MemberExpression);
+      case 'IndexExpression':
+        return this.evaluateIndex(expr as IndexExpression);
       case 'AssignmentExpression':
         return this.evaluateAssignment(expr as AssignmentExpression);
       default:
@@ -240,11 +329,16 @@ export class Interpreter {
     }
   }
 
+  private evaluateArrayLiteral(expr: ArrayLiteral): RageValue[] {
+    return expr.elements.map(el => this.evaluate(el));
+  }
+
   private evaluateBinary(expr: BinaryExpression): RageValue {
     const left = this.evaluate(expr.left);
     const right = this.evaluate(expr.right);
 
     switch (expr.operator) {
+      // Arithmetic
       case '+':
         if (typeof left === 'string' || typeof right === 'string') {
           return String(left) + String(right);
@@ -258,6 +352,10 @@ export class Interpreter {
         return Number(left) / Number(right);
       case '%':
         return Number(left) % Number(right);
+      case '**':
+        return Math.pow(Number(left), Number(right));
+      
+      // Comparison
       case '==':
         return left === right;
       case '!=':
@@ -270,10 +368,29 @@ export class Interpreter {
         return Number(left) > Number(right);
       case '>=':
         return Number(left) >= Number(right);
+      
+      // Logical (short-circuit for keyword versions)
       case 'and':
-        return this.isTruthy(left) && this.isTruthy(right);
+        return this.isTruthy(left) ? right : left;
       case 'or':
-        return this.isTruthy(left) || this.isTruthy(right);
+        return this.isTruthy(left) ? left : right;
+      case '&&':
+        return this.isTruthy(left) ? right : left;
+      case '||':
+        return this.isTruthy(left) ? left : right;
+      
+      // Bitwise
+      case '&':
+        return (Number(left) | 0) & (Number(right) | 0);
+      case '|':
+        return (Number(left) | 0) | (Number(right) | 0);
+      case '^':
+        return (Number(left) | 0) ^ (Number(right) | 0);
+      case '<<':
+        return (Number(left) | 0) << (Number(right) | 0);
+      case '>>':
+        return (Number(left) | 0) >> (Number(right) | 0);
+      
       default:
         throw new Error(`Unknown operator: ${expr.operator}`);
     }
@@ -287,6 +404,8 @@ export class Interpreter {
         return -Number(value);
       case '!':
         return !this.isTruthy(value);
+      case '~':
+        return ~(Number(value) | 0);
       default:
         throw new Error(`Unknown unary operator: ${expr.operator}`);
     }
@@ -296,11 +415,43 @@ export class Interpreter {
     const callee = this.evaluate(expr.callee);
     const args = expr.arguments.map(arg => this.evaluate(arg));
 
+    // Built-in function
     if (typeof callee === 'function') {
       return callee(...args);
     }
 
+    // User-defined function
+    if (isRageFunction(callee)) {
+      return this.callFunction(callee, args);
+    }
+
     throw new Error('Can only call functions');
+  }
+
+  private callFunction(fn: RageFunction, args: RageValue[]): RageValue {
+    // Create new environment with closure as parent
+    const fnEnv = new Environment(fn.closure as Environment);
+    
+    // Bind parameters to arguments
+    for (let i = 0; i < fn.parameters.length; i++) {
+      fnEnv.define(fn.parameters[i], args[i] ?? null);
+    }
+
+    const prevEnv = this.currentEnv;
+    this.currentEnv = fnEnv;
+
+    try {
+      this.executeBlock(fn.body as BlockStatement);
+    } catch (e) {
+      if (e instanceof ReturnException) {
+        this.currentEnv = prevEnv;
+        return e.value;
+      }
+      throw e;
+    }
+
+    this.currentEnv = prevEnv;
+    return null;
   }
 
   private evaluateMember(expr: MemberExpression): RageValue {
@@ -311,7 +462,33 @@ export class Interpreter {
       return object[property] ?? null;
     }
 
-    throw new Error('Can only access properties on prototypes');
+    // Handle array length property
+    if (Array.isArray(object) && property === 'length') {
+      return object.length;
+    }
+
+    throw new Error('Can only access properties on prototypes or arrays');
+  }
+
+  private evaluateIndex(expr: IndexExpression): RageValue {
+    const object = this.evaluate(expr.object);
+    const index = this.evaluate(expr.index);
+
+    if (Array.isArray(object)) {
+      const idx = Number(index) | 0;
+      return object[idx] ?? null;
+    }
+
+    if (typeof object === 'string') {
+      const idx = Number(index) | 0;
+      return object[idx] ?? null;
+    }
+
+    if (isPrototype(object)) {
+      return object[String(index)] ?? null;
+    }
+
+    throw new Error('Can only index into arrays, strings, or prototypes');
   }
 
   private evaluateAssignment(expr: AssignmentExpression): RageValue {
@@ -329,6 +506,19 @@ export class Interpreter {
         object[property] = value;
       } else {
         throw new Error('Can only set properties on prototypes');
+      }
+    } else if (expr.left.type === 'IndexExpression') {
+      const indexExpr = expr.left as IndexExpression;
+      const object = this.evaluate(indexExpr.object);
+      const index = this.evaluate(indexExpr.index);
+
+      if (Array.isArray(object)) {
+        const idx = Number(index) | 0;
+        object[idx] = value;
+      } else if (isPrototype(object)) {
+        object[String(index)] = value;
+      } else {
+        throw new Error('Can only index-assign to arrays or prototypes');
       }
     }
 
@@ -366,4 +556,3 @@ export class Interpreter {
     }
   }
 }
-

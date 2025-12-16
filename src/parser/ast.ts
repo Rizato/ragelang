@@ -6,7 +6,11 @@ export type ASTNode =
   | Program
   | DrawBlock
   | UpdateBlock
+  | FunctionDeclaration
+  | ReturnStatement
   | IfStatement
+  | LoopStatement
+  | BreakStatement
   | BlockStatement
   | ExpressionStatement
   | VariableDeclaration
@@ -15,10 +19,12 @@ export type ASTNode =
   | UnaryExpression
   | CallExpression
   | MemberExpression
+  | IndexExpression
   | Identifier
   | NumberLiteral
   | StringLiteral
   | BooleanLiteral
+  | ArrayLiteral
   | PrototypeExpression;
 
 export interface Program {
@@ -29,7 +35,11 @@ export interface Program {
 export type Statement =
   | DrawBlock
   | UpdateBlock
+  | FunctionDeclaration
+  | ReturnStatement
   | IfStatement
+  | LoopStatement
+  | BreakStatement
   | BlockStatement
   | ExpressionStatement
   | VariableDeclaration;
@@ -40,10 +50,12 @@ export type Expression =
   | UnaryExpression
   | CallExpression
   | MemberExpression
+  | IndexExpression
   | Identifier
   | NumberLiteral
   | StringLiteral
   | BooleanLiteral
+  | ArrayLiteral
   | PrototypeExpression;
 
 export interface DrawBlock {
@@ -57,11 +69,32 @@ export interface UpdateBlock {
   body: BlockStatement;
 }
 
+export interface FunctionDeclaration {
+  type: 'FunctionDeclaration';
+  name: string;
+  parameters: string[];
+  body: BlockStatement;
+}
+
+export interface ReturnStatement {
+  type: 'ReturnStatement';
+  argument: Expression | null;
+}
+
 export interface IfStatement {
   type: 'IfStatement';
   condition: Expression;
   consequent: BlockStatement;
   alternate: BlockStatement | IfStatement | null;
+}
+
+export interface LoopStatement {
+  type: 'LoopStatement';
+  body: BlockStatement;
+}
+
+export interface BreakStatement {
+  type: 'BreakStatement';
 }
 
 export interface BlockStatement {
@@ -82,7 +115,7 @@ export interface VariableDeclaration {
 
 export interface AssignmentExpression {
   type: 'AssignmentExpression';
-  left: Identifier | MemberExpression;
+  left: Identifier | MemberExpression | IndexExpression;
   right: Expression;
 }
 
@@ -111,6 +144,12 @@ export interface MemberExpression {
   property: Identifier;
 }
 
+export interface IndexExpression {
+  type: 'IndexExpression';
+  object: Expression;
+  index: Expression;
+}
+
 export interface Identifier {
   type: 'Identifier';
   name: string;
@@ -131,7 +170,11 @@ export interface BooleanLiteral {
   value: boolean;
 }
 
+export interface ArrayLiteral {
+  type: 'ArrayLiteral';
+  elements: Expression[];
+}
+
 export interface PrototypeExpression {
   type: 'PrototypeExpression';
 }
-

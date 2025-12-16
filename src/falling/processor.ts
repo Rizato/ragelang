@@ -44,8 +44,18 @@ export class FallingProcessor {
 
   private findFoundation(): void {
     for (let row = this.height - 1; row >= 0; row--) {
+      let inString = false;
       for (let col = 0; col < this.width; col++) {
-        if (this.grid[row][col] === '#') {
+        const char = this.grid[row][col];
+        
+        // Track string boundaries (simple: just double quotes)
+        if (char === '"') {
+          inString = !inString;
+          continue;
+        }
+        
+        // Only treat # as foundation if not inside a string
+        if (char === '#' && !inString) {
           this.foundationRow = row;
           return;
         }

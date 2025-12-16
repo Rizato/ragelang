@@ -1,29 +1,44 @@
 import { Token, TokenType } from '../lexer/tokens.js';
-import {
+import type {
   Program,
   Statement,
   Expression,
   DrawBlock,
   UpdateBlock,
+  FunctionDeclaration,
+  ReturnStatement,
   IfStatement,
+  LoopStatement,
+  BreakStatement,
   BlockStatement,
   ExpressionStatement,
   VariableDeclaration,
   AssignmentExpression,
-  BinaryExpression,
-  UnaryExpression,
   CallExpression,
   MemberExpression,
+  IndexExpression,
   Identifier,
-  NumberLiteral,
-  StringLiteral,
-  BooleanLiteral,
-  PrototypeExpression,
 } from './ast.js';
 
 /**
  * Parser for Ragelang
  * Converts tokens into an AST
+ * 
+ * Operator Precedence (lowest to highest):
+ * 1. || or (logical or)
+ * 2. && and (logical and)
+ * 3. | (bitwise or)
+ * 4. ^ (bitwise xor)
+ * 5. & (bitwise and)
+ * 6. ==, != (equality)
+ * 7. <, <=, >, >= (comparison)
+ * 8. <<, >> (shift)
+ * 9. +, - (additive)
+ * 10. *, /, % (multiplicative)
+ * 11. ** (exponentiation) - right associative
+ * 12. Unary: !, -, ~
+ * 13. Call, Member access
+ * 14. Primary
  */
 export class Parser {
   private tokens: Token[];
@@ -60,13 +75,83 @@ export class Parser {
       return this.updateBlock();
     }
 
+    // Check for function declaration
+    if (this.check(TokenType.FUN)) {
+      return this.functionDeclaration();
+    }
+
+    // Check for return statement
+    if (this.check(TokenType.RETURN)) {
+      return this.returnStatement();
+    }
+
     // Check for if statement
     if (this.check(TokenType.IF)) {
       return this.ifStatement();
     }
 
+    // Check for loop statement
+    if (this.check(TokenType.LOOP)) {
+      return this.loopStatement();
+    }
+
+    // Check for break statement
+    if (this.check(TokenType.BREAK)) {
+      return this.breakStatement();
+    }
+
     // Otherwise it's an expression statement or variable declaration
     return this.expressionStatement();
+  }
+
+  private functionDeclaration(): FunctionDeclaration {
+    this.advance(); // consume 'fun'
+    const name = this.consume(TokenType.IDENTIFIER, "Expected function name");
+    this.consume(TokenType.LPAREN, "Expected '(' after function name");
+    
+    const parameters: string[] = [];
+    if (!this.check(TokenType.RPAREN)) {
+      do {
+        const param = this.consume(TokenType.IDENTIFIER, "Expected parameter name");
+        parameters.push(param.lexeme);
+      } while (this.match(TokenType.COMMA));
+    }
+    
+    this.consume(TokenType.RPAREN, "Expected ')' after parameters");
+    this.consume(TokenType.LBRACE, "Expected '{' before function body");
+    const body = this.blockStatement();
+    
+    return {
+      type: 'FunctionDeclaration',
+      name: name.lexeme,
+      parameters,
+      body,
+    };
+  }
+
+  private returnStatement(): ReturnStatement {
+    this.advance(); // consume 'return'
+    
+    // Check if there's a return value (not immediately followed by } or end)
+    let argument: Expression | null = null;
+    if (!this.check(TokenType.RBRACE) && !this.isAtEnd()) {
+      argument = this.expression();
+    }
+    
+    return { type: 'ReturnStatement', argument };
+  }
+
+  private loopStatement(): LoopStatement {
+    this.advance(); // consume 'loop'
+    this.consume(TokenType.LBRACE, "Expected '{' after 'loop'");
+    const body = this.blockStatement();
+    
+    return { type: 'LoopStatement', body };
+  }
+
+  private breakStatement(): BreakStatement {
+    this.advance(); // consume 'break'
+    return { type: 'BreakStatement' };
   }
 
   private drawBlock(): DrawBlock {
@@ -144,15 +229,15 @@ export class Parser {
   }
 
   private assignment(): Expression {
-    const expr = this.or();
+    const expr = this.logicalOr();
 
     if (this.match(TokenType.EQUAL)) {
       const value = this.assignment();
 
-      if (expr.type === 'Identifier' || expr.type === 'MemberExpression') {
+      if (expr.type === 'Identifier' || expr.type === 'MemberExpression' || expr.type === 'IndexExpression') {
         return {
           type: 'AssignmentExpression',
-          left: expr as Identifier | MemberExpression,
+          left: expr as Identifier | MemberExpression | IndexExpression,
           right: value,
         };
       }
@@ -163,14 +248,16 @@ export class Parser {
     return expr;
   }
 
-  private or(): Expression {
-    let expr = this.and();
+  // Logical OR: || or 'or' keyword
+  private logicalOr(): Expression {
+    let expr = this.logicalAnd();
 
-    while (this.match(TokenType.OR)) {
-      const right = this.and();
+    while (this.match(TokenType.OR, TokenType.PIPE_PIPE)) {
+      const operator = this.previous().type === TokenType.OR ? 'or' : '||';
+      const right = this.logicalAnd();
       expr = {
         type: 'BinaryExpression',
-        operator: 'or',
+        operator,
         left: expr,
         right,
       };
@@ -179,14 +266,67 @@ export class Parser {
     return expr;
   }
 
-  private and(): Expression {
+  // Logical AND: && or 'and' keyword
+  private logicalAnd(): Expression {
+    let expr = this.bitwiseOr();
+
+    while (this.match(TokenType.AND, TokenType.AMPERSAND_AMPERSAND)) {
+      const operator = this.previous().type === TokenType.AND ? 'and' : '&&';
+      const right = this.bitwiseOr();
+      expr = {
+        type: 'BinaryExpression',
+        operator,
+        left: expr,
+        right,
+      };
+    }
+
+    return expr;
+  }
+
+  // Bitwise OR: |
+  private bitwiseOr(): Expression {
+    let expr = this.bitwiseXor();
+
+    while (this.match(TokenType.PIPE)) {
+      const right = this.bitwiseXor();
+      expr = {
+        type: 'BinaryExpression',
+        operator: '|',
+        left: expr,
+        right,
+      };
+    }
+
+    return expr;
+  }
+
+  // Bitwise XOR: ^
+  private bitwiseXor(): Expression {
+    let expr = this.bitwiseAnd();
+
+    while (this.match(TokenType.CARET)) {
+      const right = this.bitwiseAnd();
+      expr = {
+        type: 'BinaryExpression',
+        operator: '^',
+        left: expr,
+        right,
+      };
+    }
+
+    return expr;
+  }
+
+  // Bitwise AND: &
+  private bitwiseAnd(): Expression {
     let expr = this.equality();
 
-    while (this.match(TokenType.AND)) {
+    while (this.match(TokenType.AMPERSAND)) {
       const right = this.equality();
       expr = {
         type: 'BinaryExpression',
-        operator: 'and',
+        operator: '&',
         left: expr,
         right,
       };
@@ -195,6 +335,7 @@ export class Parser {
     return expr;
   }
 
+  // Equality: ==, !=
   private equality(): Expression {
     let expr = this.comparison();
 
@@ -212,10 +353,29 @@ export class Parser {
     return expr;
   }
 
+  // Comparison: <, <=, >, >=
   private comparison(): Expression {
-    let expr = this.term();
+    let expr = this.shift();
 
     while (this.match(TokenType.LESS, TokenType.LESS_EQUAL, TokenType.GREATER, TokenType.GREATER_EQUAL)) {
+      const operator = this.previous().lexeme;
+      const right = this.shift();
+      expr = {
+        type: 'BinaryExpression',
+        operator,
+        left: expr,
+        right,
+      };
+    }
+
+    return expr;
+  }
+
+  // Shift: <<, >>
+  private shift(): Expression {
+    let expr = this.term();
+
+    while (this.match(TokenType.LESS_LESS, TokenType.GREATER_GREATER)) {
       const operator = this.previous().lexeme;
       const right = this.term();
       expr = {
@@ -229,6 +389,7 @@ export class Parser {
     return expr;
   }
 
+  // Additive: +, -
   private term(): Expression {
     let expr = this.factor();
 
@@ -246,12 +407,13 @@ export class Parser {
     return expr;
   }
 
+  // Multiplicative: *, /, %
   private factor(): Expression {
-    let expr = this.unary();
+    let expr = this.exponentiation();
 
     while (this.match(TokenType.STAR, TokenType.SLASH, TokenType.PERCENT)) {
       const operator = this.previous().lexeme;
-      const right = this.unary();
+      const right = this.exponentiation();
       expr = {
         type: 'BinaryExpression',
         operator,
@@ -263,8 +425,26 @@ export class Parser {
     return expr;
   }
 
+  // Exponentiation: ** (right associative)
+  private exponentiation(): Expression {
+    const expr = this.unary();
+
+    if (this.match(TokenType.STAR_STAR)) {
+      const right = this.exponentiation(); // Right associative
+      return {
+        type: 'BinaryExpression',
+        operator: '**',
+        left: expr,
+        right,
+      };
+    }
+
+    return expr;
+  }
+
+  // Unary: !, -, ~
   private unary(): Expression {
-    if (this.match(TokenType.BANG, TokenType.MINUS)) {
+    if (this.match(TokenType.BANG, TokenType.MINUS, TokenType.TILDE)) {
       const operator = this.previous().lexeme;
       const argument = this.unary();
       return {
@@ -289,6 +469,14 @@ export class Parser {
           type: 'MemberExpression',
           object: expr,
           property: { type: 'Identifier', name: name.lexeme },
+        };
+      } else if (this.match(TokenType.LBRACKET)) {
+        const index = this.expression();
+        this.consume(TokenType.RBRACKET, "Expected ']' after index");
+        expr = {
+          type: 'IndexExpression',
+          object: expr,
+          index,
         };
       } else {
         break;
@@ -349,6 +537,18 @@ export class Parser {
       return expr;
     }
 
+    if (this.match(TokenType.LBRACKET)) {
+      // Array literal
+      const elements: Expression[] = [];
+      if (!this.check(TokenType.RBRACKET)) {
+        do {
+          elements.push(this.expression());
+        } while (this.match(TokenType.COMMA));
+      }
+      this.consume(TokenType.RBRACKET, "Expected ']' after array elements");
+      return { type: 'ArrayLiteral', elements };
+    }
+
     throw new Error(`Unexpected token: ${this.peek().lexeme} at line ${this.peek().line}`);
   }
 
@@ -391,4 +591,3 @@ export class Parser {
     throw new Error(`${message}. Got: ${this.peek().lexeme} at line ${this.peek().line}`);
   }
 }
-

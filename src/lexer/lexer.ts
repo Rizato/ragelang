@@ -46,14 +46,35 @@ export class Lexer {
       case ',': this.addToken(TokenType.COMMA); break;
       case '.': this.addToken(TokenType.DOT); break;
       case ';': this.addToken(TokenType.SEMICOLON); break;
+      case ':': this.addToken(TokenType.COLON); break;
       case '+': this.addToken(TokenType.PLUS); break;
       case '-': this.addToken(TokenType.MINUS); break;
-      case '*': this.addToken(TokenType.STAR); break;
+      case '*': this.addToken(this.match('*') ? TokenType.STAR_STAR : TokenType.STAR); break;
       case '%': this.addToken(TokenType.PERCENT); break;
+      case '^': this.addToken(TokenType.CARET); break;
+      case '~': this.addToken(TokenType.TILDE); break;
+      case '&': this.addToken(this.match('&') ? TokenType.AMPERSAND_AMPERSAND : TokenType.AMPERSAND); break;
+      case '|': this.addToken(this.match('|') ? TokenType.PIPE_PIPE : TokenType.PIPE); break;
       case '!': this.addToken(this.match('=') ? TokenType.BANG_EQUAL : TokenType.BANG); break;
       case '=': this.addToken(this.match('=') ? TokenType.EQUAL_EQUAL : TokenType.EQUAL); break;
-      case '<': this.addToken(this.match('=') ? TokenType.LESS_EQUAL : TokenType.LESS); break;
-      case '>': this.addToken(this.match('=') ? TokenType.GREATER_EQUAL : TokenType.GREATER); break;
+      case '<':
+        if (this.match('<')) {
+          this.addToken(TokenType.LESS_LESS);
+        } else if (this.match('=')) {
+          this.addToken(TokenType.LESS_EQUAL);
+        } else {
+          this.addToken(TokenType.LESS);
+        }
+        break;
+      case '>':
+        if (this.match('>')) {
+          this.addToken(TokenType.GREATER_GREATER);
+        } else if (this.match('=')) {
+          this.addToken(TokenType.GREATER_EQUAL);
+        } else {
+          this.addToken(TokenType.GREATER);
+        }
+        break;
       
       case '/':
         if (this.match('/')) {
@@ -154,6 +175,43 @@ export class Lexer {
 
   private number(): void {
     const startColumn = this.column - 1;
+    const firstChar = this.source[this.start];
+    
+    // Check for hex literal (0x or 0X)
+    if (firstChar === '0' && (this.peek() === 'x' || this.peek() === 'X')) {
+      this.advance(); // consume 'x'
+      while (this.isHexDigit(this.peek())) {
+        this.advance();
+      }
+      const lexeme = this.source.substring(this.start, this.current);
+      this.tokens.push({
+        type: TokenType.NUMBER,
+        lexeme,
+        literal: parseInt(lexeme, 16),
+        line: this.line,
+        column: startColumn,
+      });
+      return;
+    }
+
+    // Check for binary literal (0b or 0B)
+    if (firstChar === '0' && (this.peek() === 'b' || this.peek() === 'B')) {
+      this.advance(); // consume 'b'
+      while (this.peek() === '0' || this.peek() === '1') {
+        this.advance();
+      }
+      const lexeme = this.source.substring(this.start, this.current);
+      this.tokens.push({
+        type: TokenType.NUMBER,
+        lexeme,
+        literal: parseInt(lexeme.slice(2), 2),
+        line: this.line,
+        column: startColumn,
+      });
+      return;
+    }
+
+    // Regular decimal number
     while (this.isDigit(this.peek())) {
       this.advance();
     }
@@ -161,6 +219,17 @@ export class Lexer {
     // Look for fractional part
     if (this.peek() === '.' && this.isDigit(this.peekNext())) {
       this.advance(); // Consume the .
+      while (this.isDigit(this.peek())) {
+        this.advance();
+      }
+    }
+
+    // Look for exponent part (e or E)
+    if (this.peek() === 'e' || this.peek() === 'E') {
+      this.advance();
+      if (this.peek() === '+' || this.peek() === '-') {
+        this.advance();
+      }
       while (this.isDigit(this.peek())) {
         this.advance();
       }
@@ -174,6 +243,12 @@ export class Lexer {
       line: this.line,
       column: startColumn,
     });
+  }
+
+  private isHexDigit(c: string): boolean {
+    return this.isDigit(c) || 
+           (c >= 'a' && c <= 'f') || 
+           (c >= 'A' && c <= 'F');
   }
 
   private identifier(): void {

@@ -53,28 +53,37 @@ export class CanvasRenderer {
 
   /**
    * Draw text on the canvas
-   * text(text, x, y, color)
+   * text(text, x, y, size, color)
    */
-  text(text: string, x: number, y: number, color: string = '#ffffff'): void {
+  text(text: string, x: number, y: number, size: number = 16, color: string = '#ffffff'): void {
     if (!this.ctx) return;
 
     this.ctx.fillStyle = color;
-    this.ctx.font = '16px monospace';
+    this.ctx.font = `${size}px monospace`;
     this.ctx.fillText(text, x, y);
   }
 
   /**
    * Draw a sprite on the canvas
-   * sprite(path, x, y, color, outline)
+   * sprite(path, x, y, width, height, color)
+   * If path is null/empty, draws a colored rectangle
    */
   sprite(
-    path: string,
+    path: string | null,
     x: number,
     y: number,
-    color: string = '#ffffff',
-    outline: boolean = false
+    width: number = 32,
+    height: number = 32,
+    color: string = '#ffffff'
   ): void {
     if (!this.ctx) return;
+
+    // If no path, draw a colored rectangle
+    if (!path) {
+      this.ctx.fillStyle = color;
+      this.ctx.fillRect(x, y, width, height);
+      return;
+    }
 
     // Check if sprite is already loaded
     let spriteData = this.sprites.get(path);
@@ -96,39 +105,16 @@ export class CanvasRenderer {
     }
 
     if (spriteData.loaded) {
-      // Apply color tint if specified
-      if (color !== '#ffffff') {
-        this.ctx.save();
-        this.ctx.globalCompositeOperation = 'source-atop';
-        this.ctx.fillStyle = color;
-      }
-      
-      this.ctx.drawImage(spriteData.image, x, y);
-      
-      if (color !== '#ffffff') {
-        this.ctx.restore();
-      }
-
-      if (outline) {
-        this.ctx.strokeStyle = color;
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(
-          x - 1,
-          y - 1,
-          spriteData.image.width + 2,
-          spriteData.image.height + 2
-        );
+      // Draw the image, optionally scaled
+      if (width && height) {
+        this.ctx.drawImage(spriteData.image, x, y, width, height);
+      } else {
+        this.ctx.drawImage(spriteData.image, x, y);
       }
     } else {
       // Draw placeholder while loading
       this.ctx.fillStyle = color;
-      this.ctx.fillRect(x, y, 32, 32);
-      
-      if (outline) {
-        this.ctx.strokeStyle = '#ffffff';
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(x - 1, y - 1, 34, 34);
-      }
+      this.ctx.fillRect(x, y, width, height);
     }
   }
 
@@ -143,6 +129,17 @@ export class CanvasRenderer {
   }
 
   /**
+   * Draw a stroked rectangle (outline only)
+   */
+  strokeRect(x: number, y: number, width: number, height: number, color: string, lineWidth: number = 1): void {
+    if (!this.ctx) return;
+    
+    this.ctx.strokeStyle = color;
+    this.ctx.lineWidth = lineWidth;
+    this.ctx.strokeRect(x, y, width, height);
+  }
+
+  /**
    * Draw a circle
    */
   circle(x: number, y: number, radius: number, color: string): void {
@@ -152,6 +149,19 @@ export class CanvasRenderer {
     this.ctx.beginPath();
     this.ctx.arc(x, y, radius, 0, Math.PI * 2);
     this.ctx.fill();
+  }
+
+  /**
+   * Draw a stroked circle (outline only)
+   */
+  strokeCircle(x: number, y: number, radius: number, color: string, lineWidth: number = 1): void {
+    if (!this.ctx) return;
+
+    this.ctx.strokeStyle = color;
+    this.ctx.lineWidth = lineWidth;
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+    this.ctx.stroke();
   }
 
   /**
@@ -211,4 +221,3 @@ export class CanvasRenderer {
     });
   }
 }
-

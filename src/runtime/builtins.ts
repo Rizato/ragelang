@@ -6,12 +6,21 @@ import { CanvasRenderer } from '../renderer/canvas.js';
 
 export type BuiltinFunction = (...args: RageValue[]) => RageValue;
 
+export interface RageFunction {
+  __type: 'function';
+  name: string;
+  parameters: string[];
+  body: unknown; // BlockStatement - avoid circular import
+  closure: unknown; // Environment - avoid circular import
+}
+
 export type RageValue = 
   | number 
   | string 
   | boolean 
   | null 
   | RagePrototype 
+  | RageFunction
   | BuiltinFunction
   | RageValue[];
 
@@ -24,19 +33,36 @@ export function createBuiltins(renderer: CanvasRenderer): Map<string, BuiltinFun
   const builtins = new Map<string, BuiltinFunction>();
 
   // Drawing functions
-  builtins.set('text', (text: RageValue, x: RageValue, y: RageValue, color: RageValue = '#ffffff') => {
-    renderer.text(String(text), Number(x), Number(y), String(color));
+  // text(text, x, y, size, color)
+  builtins.set('text', (
+    text: RageValue, 
+    x: RageValue, 
+    y: RageValue, 
+    size: RageValue = 16, 
+    color: RageValue = '#ffffff'
+  ) => {
+    renderer.text(String(text), Number(x), Number(y), Number(size), String(color));
     return null;
   });
 
+  // sprite(path, x, y, width, height, color)
+  // If path is empty/null, draws a colored rectangle
   builtins.set('sprite', (
     path: RageValue,
     x: RageValue,
     y: RageValue,
-    color: RageValue = '#ffffff',
-    outline: RageValue = false
+    width: RageValue = 32,
+    height: RageValue = 32,
+    color: RageValue = '#ffffff'
   ) => {
-    renderer.sprite(String(path), Number(x), Number(y), String(color), Boolean(outline));
+    renderer.sprite(
+      path ? String(path) : null, 
+      Number(x), 
+      Number(y), 
+      Number(width),
+      Number(height),
+      String(color)
+    );
     return null;
   });
 
@@ -45,6 +71,7 @@ export function createBuiltins(renderer: CanvasRenderer): Map<string, BuiltinFun
     return null;
   });
 
+  // rect(x, y, width, height, color) - draw filled rectangle
   builtins.set('rect', (
     x: RageValue,
     y: RageValue,
@@ -82,9 +109,16 @@ export function createBuiltins(renderer: CanvasRenderer): Map<string, BuiltinFun
   builtins.set('max', (a: RageValue, b: RageValue) => Math.max(Number(a), Number(b)));
   builtins.set('sin', (x: RageValue) => Math.sin(Number(x)));
   builtins.set('cos', (x: RageValue) => Math.cos(Number(x)));
+  builtins.set('tan', (x: RageValue) => Math.tan(Number(x)));
+  builtins.set('atan2', (y: RageValue, x: RageValue) => Math.atan2(Number(y), Number(x)));
   builtins.set('sqrt', (x: RageValue) => Math.sqrt(Number(x)));
   builtins.set('pow', (base: RageValue, exp: RageValue) => Math.pow(Number(base), Number(exp)));
   builtins.set('random', () => Math.random());
+  builtins.set('randomInt', (min: RageValue, max: RageValue) => {
+    const nmin = Math.floor(Number(min));
+    const nmax = Math.floor(Number(max));
+    return Math.floor(Math.random() * (nmax - nmin + 1)) + nmin;
+  });
 
   // Utility functions
   builtins.set('print', (...args: RageValue[]) => {
@@ -126,6 +160,31 @@ export function createBuiltins(renderer: CanvasRenderer): Map<string, BuiltinFun
            ny1 < ny2 + nh2 && ny1 + nh1 > ny2;
   });
 
+  // Array helpers
+  builtins.set('len', (arr: RageValue) => {
+    if (Array.isArray(arr)) return arr.length;
+    if (typeof arr === 'string') return arr.length;
+    return 0;
+  });
+
+  builtins.set('push', (arr: RageValue, value: RageValue) => {
+    if (Array.isArray(arr)) {
+      arr.push(value);
+      return arr.length;
+    }
+    return null;
+  });
+
+  builtins.set('pop', (arr: RageValue) => {
+    if (Array.isArray(arr)) {
+      return arr.pop() ?? null;
+    }
+    return null;
+  });
+
+  // Time helpers (for animations)
+  builtins.set('time', () => performance.now() / 1000);
+
   return builtins;
 }
 
@@ -145,4 +204,3 @@ export function isPrototype(value: RageValue): value is RagePrototype {
          !Array.isArray(value) &&
          (value as RagePrototype).__type === 'prototype';
 }
-
