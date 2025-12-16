@@ -37,21 +37,27 @@ const GAMEPAD_AXIS_THRESHOLD = 0.5;
 export class InputManager {
   private canvas: HTMLCanvasElement | null = null;
   
-  // Keyboard state
+  // Keyboard state (double-buffered for proper frame timing)
   private keysDown: Set<string> = new Set();
-  private keysPressed: Set<string> = new Set();  // Just pressed this frame
-  private keysReleased: Set<string> = new Set(); // Just released this frame
+  private keysPressedBuffer: Set<string> = new Set();  // Accumulates between frames
+  private keysPressed: Set<string> = new Set();  // Just pressed this frame (read by game)
+  private keysReleasedBuffer: Set<string> = new Set(); // Accumulates between frames
+  private keysReleased: Set<string> = new Set(); // Just released this frame (read by game)
   
-  // Mouse/Touch state
+  // Mouse/Touch state (double-buffered)
   private mouseX: number = 0;
   private mouseY: number = 0;
   private mouseButtons: Set<number> = new Set();
+  private mouseJustPressedBuffer: Set<number> = new Set();
   private mouseJustPressed: Set<number> = new Set();
+  private mouseJustReleasedBuffer: Set<number> = new Set();
   private mouseJustReleased: Set<number> = new Set();
   
-  // Touch state (for mobile)
+  // Touch state (for mobile, double-buffered)
   private touches: Map<number, { x: number; y: number }> = new Map();
+  private touchJustStartedBuffer: boolean = false;
   private touchJustStarted: boolean = false;
+  private touchJustEndedBuffer: boolean = false;
   private touchJustEnded: boolean = false;
   
   // Gamepad state
@@ -113,15 +119,28 @@ export class InputManager {
 
   /**
    * Update input state - call this at the START of each frame
+   * Uses double-buffering: events accumulate in buffers between frames,
+   * then get swapped to the readable state at frame start.
    */
   update(): void {
-    // Clear per-frame state
-    this.keysPressed.clear();
-    this.keysReleased.clear();
-    this.mouseJustPressed.clear();
-    this.mouseJustReleased.clear();
-    this.touchJustStarted = false;
-    this.touchJustEnded = false;
+    // Swap buffers: move accumulated input to readable state
+    // Keyboard
+    this.keysPressed = this.keysPressedBuffer;
+    this.keysPressedBuffer = new Set();
+    this.keysReleased = this.keysReleasedBuffer;
+    this.keysReleasedBuffer = new Set();
+    
+    // Mouse
+    this.mouseJustPressed = this.mouseJustPressedBuffer;
+    this.mouseJustPressedBuffer = new Set();
+    this.mouseJustReleased = this.mouseJustReleasedBuffer;
+    this.mouseJustReleasedBuffer = new Set();
+    
+    // Touch
+    this.touchJustStarted = this.touchJustStartedBuffer;
+    this.touchJustStartedBuffer = false;
+    this.touchJustEnded = this.touchJustEndedBuffer;
+    this.touchJustEndedBuffer = false;
     
     // Poll gamepad
     this.pollGamepad();
@@ -478,25 +497,25 @@ export class InputManager {
 
   private onKeyDown = (e: KeyboardEvent): void => {
     if (!this.keysDown.has(e.code)) {
-      this.keysPressed.add(e.code);
+      this.keysPressedBuffer.add(e.code);  // Write to buffer
     }
     this.keysDown.add(e.code);
   };
 
   private onKeyUp = (e: KeyboardEvent): void => {
     this.keysDown.delete(e.code);
-    this.keysReleased.add(e.code);
+    this.keysReleasedBuffer.add(e.code);  // Write to buffer
   };
 
   private onMouseDown = (e: MouseEvent): void => {
     this.mouseButtons.add(e.button);
-    this.mouseJustPressed.add(e.button);
+    this.mouseJustPressedBuffer.add(e.button);  // Write to buffer
     this.updateMousePosition(e);
   };
 
   private onMouseUp = (e: MouseEvent): void => {
     this.mouseButtons.delete(e.button);
-    this.mouseJustReleased.add(e.button);
+    this.mouseJustReleasedBuffer.add(e.button);  // Write to buffer
   };
 
   private onMouseMove = (e: MouseEvent): void => {
@@ -515,7 +534,7 @@ export class InputManager {
   }
 
   private onTouchStart = (e: TouchEvent): void => {
-    this.touchJustStarted = true;
+    this.touchJustStartedBuffer = true;  // Write to buffer
     this.updateTouches(e);
     
     // Use first touch as mouse position
@@ -526,7 +545,7 @@ export class InputManager {
 
   private onTouchEnd = (e: TouchEvent): void => {
     if (e.touches.length === 0) {
-      this.touchJustEnded = true;
+      this.touchJustEndedBuffer = true;  // Write to buffer
       this.touches.clear();
     } else {
       this.updateTouches(e);
