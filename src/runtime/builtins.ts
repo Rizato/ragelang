@@ -14,6 +14,29 @@ export interface RageFunction {
   closure: unknown; // Environment - avoid circular import
 }
 
+// Enum type definition (created by enum declaration)
+export interface RageEnum {
+  __type: 'enum';
+  name: string;
+  variants: Map<string, RageEnumVariantDef>;
+}
+
+// Enum variant definition (the "constructor" for a variant)
+export interface RageEnumVariantDef {
+  __type: 'enum_variant_def';
+  enumName: string;
+  variantName: string;
+  fields: string[];  // Field names for data variants
+}
+
+// Enum variant instance (an actual value of an enum type)
+export interface RageEnumVariant {
+  __type: 'enum_variant';
+  enumName: string;
+  variantName: string;
+  data: Map<string, RageValue>;  // Field name -> value
+}
+
 export type RageValue = 
   | number 
   | string 
@@ -21,6 +44,9 @@ export type RageValue =
   | null 
   | RagePrototype 
   | RageFunction
+  | RageEnum
+  | RageEnumVariantDef
+  | RageEnumVariant
   | BuiltinFunction
   | RageValue[];
 
@@ -161,6 +187,11 @@ export function createBuiltins(renderer: CanvasRenderer): Map<string, BuiltinFun
   });
 
   // Array helpers
+  builtins.set('array', (size: RageValue = 0) => {
+    const n = Math.max(0, Math.floor(Number(size)));
+    return new Array(n).fill(null);
+  });
+
   builtins.set('len', (arr: RageValue) => {
     if (Array.isArray(arr)) return arr.length;
     if (typeof arr === 'string') return arr.length;
@@ -203,4 +234,40 @@ export function isPrototype(value: RageValue): value is RagePrototype {
          value !== null && 
          !Array.isArray(value) &&
          (value as RagePrototype).__type === 'prototype';
+}
+
+/**
+ * Check if a value is an enum variant definition
+ */
+export function isEnumVariantDef(value: RageValue): value is RageEnumVariantDef {
+  return typeof value === 'object' && 
+         value !== null && 
+         !Array.isArray(value) &&
+         (value as RageEnumVariantDef).__type === 'enum_variant_def';
+}
+
+/**
+ * Check if a value is an enum variant instance
+ */
+export function isEnumVariant(value: RageValue): value is RageEnumVariant {
+  return typeof value === 'object' && 
+         value !== null && 
+         !Array.isArray(value) &&
+         (value as RageEnumVariant).__type === 'enum_variant';
+}
+
+/**
+ * Create an enum variant instance
+ */
+export function createEnumVariant(
+  enumName: string,
+  variantName: string,
+  data: Map<string, RageValue> = new Map()
+): RageEnumVariant {
+  return {
+    __type: 'enum_variant',
+    enumName,
+    variantName,
+    data,
+  };
 }

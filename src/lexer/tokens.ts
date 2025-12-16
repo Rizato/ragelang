@@ -19,6 +19,9 @@ export enum TokenType {
   TRUE = 'TRUE',
   FALSE = 'FALSE',
   PROTOTYPE = 'PROTOTYPE',
+  ENUM = 'ENUM',
+  MATCH = 'MATCH',
+  UNDERSCORE = 'UNDERSCORE',  // _ wildcard pattern
   
   // Arithmetic Operators
   PLUS = 'PLUS',
@@ -63,6 +66,7 @@ export enum TokenType {
   DOT = 'DOT',
   SEMICOLON = 'SEMICOLON',
   COLON = 'COLON',
+  FAT_ARROW = 'FAT_ARROW',  // =>
   
   // Special
   FOUNDATION = 'FOUNDATION',
@@ -91,6 +95,8 @@ export const KEYWORDS: Record<string, TokenType> = {
   'true': TokenType.TRUE,
   'false': TokenType.FALSE,
   'prototype': TokenType.PROTOTYPE,
+  'enum': TokenType.ENUM,
+  'match': TokenType.MATCH,
   'and': TokenType.AND,
   'or': TokenType.OR,
 };

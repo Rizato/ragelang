@@ -56,7 +56,15 @@ export class Lexer {
       case '&': this.addToken(this.match('&') ? TokenType.AMPERSAND_AMPERSAND : TokenType.AMPERSAND); break;
       case '|': this.addToken(this.match('|') ? TokenType.PIPE_PIPE : TokenType.PIPE); break;
       case '!': this.addToken(this.match('=') ? TokenType.BANG_EQUAL : TokenType.BANG); break;
-      case '=': this.addToken(this.match('=') ? TokenType.EQUAL_EQUAL : TokenType.EQUAL); break;
+      case '=':
+        if (this.match('=')) {
+          this.addToken(TokenType.EQUAL_EQUAL);
+        } else if (this.match('>')) {
+          this.addToken(TokenType.FAT_ARROW);
+        } else {
+          this.addToken(TokenType.EQUAL);
+        }
+        break;
       case '<':
         if (this.match('<')) {
           this.addToken(TokenType.LESS_LESS);
@@ -258,6 +266,19 @@ export class Lexer {
     }
 
     const text = this.source.substring(this.start, this.current);
+    
+    // Check for standalone underscore (wildcard pattern)
+    if (text === '_') {
+      this.tokens.push({
+        type: TokenType.UNDERSCORE,
+        lexeme: text,
+        literal: null,
+        line: this.line,
+        column: startColumn,
+      });
+      return;
+    }
+    
     const type = KEYWORDS[text] ?? TokenType.IDENTIFIER;
     
     let literal: string | boolean | null = null;

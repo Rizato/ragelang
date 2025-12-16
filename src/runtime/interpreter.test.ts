@@ -618,5 +618,204 @@ b = apply(triple, 5)
     expect(env.get('a')).toBe(10);
     expect(env.get('b')).toBe(15);
   });
+
+  // Array builtin tests
+  it('should create array with array(size) builtin', () => {
+    const interpreter = runProgram(`
+arr = array(5)
+result = arr.length
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(5);
+  });
+
+  it('should create array with null values', () => {
+    const interpreter = runProgram(`
+arr = array(3)
+first = arr[0]
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('first')).toBe(null);
+  });
+
+  // Object literal tests
+  it('should create object literals', () => {
+    const interpreter = runProgram(`
+obj = {name: "Alice", age: 30}
+n = obj.name
+a = obj.age
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('n')).toBe('Alice');
+    expect(env.get('a')).toBe(30);
+  });
+
+  it('should create nested object literals', () => {
+    const interpreter = runProgram(`
+person = {
+  name: "Bob",
+  address: {city: "NYC", zip: 10001}
+}
+city = person.address.city
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('city')).toBe('NYC');
+  });
+
+  it('should create object literals with expressions', () => {
+    const interpreter = runProgram(`
+x = 10
+obj = {value: x * 2, doubled: true}
+v = obj.value
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('v')).toBe(20);
+  });
+
+  // Enum tests
+  it('should define unit enum variants', () => {
+    const interpreter = runProgram(`
+enum Status { Idle, Running, Stopped }
+s = Idle
+`);
+    const env = interpreter.getEnvironment();
+    const s = env.get('s');
+    expect(s).toHaveProperty('__type', 'enum_variant');
+    expect(s).toHaveProperty('variantName', 'Idle');
+  });
+
+  it('should define data enum variants', () => {
+    const interpreter = runProgram(`
+enum Message { Text(content), Number(value) }
+msg = Text("hello")
+`);
+    const env = interpreter.getEnvironment();
+    const msg = env.get('msg');
+    expect(msg).toHaveProperty('__type', 'enum_variant');
+    expect(msg).toHaveProperty('variantName', 'Text');
+  });
+
+  it('should handle enum variants with multiple fields', () => {
+    const interpreter = runProgram(`
+enum Point { XY(x, y), XYZ(x, y, z) }
+p = XY(10, 20)
+`);
+    const env = interpreter.getEnvironment();
+    const p = env.get('p');
+    expect(p).toHaveProperty('variantName', 'XY');
+  });
+
+  // Match expression tests
+  it('should match literal patterns', () => {
+    const interpreter = runProgram(`
+x = 2
+result = match x {
+  1 => "one",
+  2 => "two",
+  _ => "other"
+}
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe('two');
+  });
+
+  it('should match wildcard pattern', () => {
+    const interpreter = runProgram(`
+x = 999
+result = match x {
+  1 => "one",
+  2 => "two",
+  _ => "other"
+}
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe('other');
+  });
+
+  it('should match and bind identifier pattern', () => {
+    const interpreter = runProgram(`
+x = 42
+result = match x {
+  n => n * 2
+}
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(84);
+  });
+
+  it('should match unit enum variants', () => {
+    const interpreter = runProgram(`
+enum State { Idle, Active, Done }
+s = Active
+result = match s {
+  Idle => "idle",
+  Active => "active",
+  Done => "done"
+}
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe('active');
+  });
+
+  it('should match data enum variants with destructuring', () => {
+    const interpreter = runProgram(`
+enum Expr { Num(value), Add(left, right) }
+e = Num(42)
+result = match e {
+  Num(v) => v,
+  _ => 0
+}
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(42);
+  });
+
+  it('should match string patterns', () => {
+    const interpreter = runProgram(`
+cmd = "quit"
+result = match cmd {
+  "start" => 1,
+  "stop" => 2,
+  "quit" => 3,
+  _ => 0
+}
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(3);
+  });
+
+  it('should match boolean patterns', () => {
+    const interpreter = runProgram(`
+flag = true
+result = match flag {
+  true => "yes",
+  false => "no"
+}
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe('yes');
+  });
+
+  it('should use match for state machine pattern', () => {
+    const interpreter = runProgram(`
+enum State { Idle, Running(speed), GameOver(score) }
+
+fun get_message(state) {
+  return match state {
+    Idle => "Waiting to start",
+    Running(s) => "Running at speed",
+    GameOver(sc) => "Game over!"
+  }
+}
+
+msg1 = get_message(Idle)
+msg2 = get_message(Running(5))
+msg3 = get_message(GameOver(100))
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('msg1')).toBe('Waiting to start');
+    expect(env.get('msg2')).toBe('Running at speed');
+    expect(env.get('msg3')).toBe('Game over!');
+  });
 });
 

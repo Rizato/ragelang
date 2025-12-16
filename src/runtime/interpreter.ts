@@ -5,6 +5,7 @@ import type {
   DrawBlock,
   UpdateBlock,
   FunctionDeclaration,
+  EnumDeclaration,
   ReturnStatement,
   IfStatement,
   LoopStatement,
@@ -17,6 +18,9 @@ import type {
   MemberExpression,
   IndexExpression,
   ArrayLiteral,
+  ObjectLiteral,
+  MatchExpression,
+  Pattern,
   Identifier,
   NumberLiteral,
   StringLiteral,
@@ -26,10 +30,14 @@ import { CanvasRenderer } from '../renderer/canvas.js';
 import {
   type RageValue,
   type RageFunction,
+  type RageEnumVariantDef,
   type BuiltinFunction,
   createBuiltins,
   createPrototype,
   isPrototype,
+  isEnumVariantDef,
+  isEnumVariant,
+  createEnumVariant,
 } from './builtins.js';
 
 /**
@@ -199,6 +207,9 @@ export class Interpreter {
       case 'FunctionDeclaration':
         this.executeFunctionDeclaration(stmt);
         break;
+      case 'EnumDeclaration':
+        this.executeEnumDeclaration(stmt as EnumDeclaration);
+        break;
       case 'ReturnStatement':
         this.executeReturn(stmt);
         break;
@@ -232,6 +243,27 @@ export class Interpreter {
       closure: this.currentEnv,
     };
     this.currentEnv.define(stmt.name, fn);
+  }
+
+  private executeEnumDeclaration(stmt: EnumDeclaration): void {
+    // Register each variant as a callable constructor in the environment
+    for (const variant of stmt.variants) {
+      const variantDef: RageEnumVariantDef = {
+        __type: 'enum_variant_def',
+        enumName: stmt.name,
+        variantName: variant.name,
+        fields: variant.fields,
+      };
+      
+      // Unit variants (no fields) are stored as a pre-created instance
+      if (variant.fields.length === 0) {
+        const instance = createEnumVariant(stmt.name, variant.name);
+        this.currentEnv.define(variant.name, instance);
+      } else {
+        // Data variants are stored as the variant definition (acts as constructor)
+        this.currentEnv.define(variant.name, variantDef);
+      }
+    }
   }
 
   private executeReturn(stmt: ReturnStatement): void {
@@ -308,6 +340,10 @@ export class Interpreter {
         return (expr as BooleanLiteral).value;
       case 'ArrayLiteral':
         return this.evaluateArrayLiteral(expr as ArrayLiteral);
+      case 'ObjectLiteral':
+        return this.evaluateObjectLiteral(expr as ObjectLiteral);
+      case 'MatchExpression':
+        return this.evaluateMatch(expr as MatchExpression);
       case 'Identifier':
         return this.currentEnv.get((expr as Identifier).name);
       case 'PrototypeExpression':
@@ -331,6 +367,115 @@ export class Interpreter {
 
   private evaluateArrayLiteral(expr: ArrayLiteral): RageValue[] {
     return expr.elements.map(el => this.evaluate(el));
+  }
+
+  private evaluateObjectLiteral(expr: ObjectLiteral): RageValue {
+    const obj = createPrototype();
+    for (const prop of expr.properties) {
+      obj[prop.key] = this.evaluate(prop.value);
+    }
+    return obj;
+  }
+
+  private evaluateMatch(expr: MatchExpression): RageValue {
+    const subject = this.evaluate(expr.subject);
+    
+    for (const arm of expr.arms) {
+      const bindings = this.matchPattern(arm.pattern, subject);
+      if (bindings !== null) {
+        // Pattern matched! Create a scope with bindings and evaluate body
+        const matchEnv = new Environment(this.currentEnv);
+        for (const [name, value] of bindings) {
+          matchEnv.define(name, value);
+        }
+        
+        const prevEnv = this.currentEnv;
+        this.currentEnv = matchEnv;
+        try {
+          return this.evaluate(arm.body);
+        } finally {
+          this.currentEnv = prevEnv;
+        }
+      }
+    }
+    
+    throw new Error('Non-exhaustive match: no pattern matched');
+  }
+
+  /**
+   * Try to match a pattern against a value.
+   * Returns a Map of bindings if successful, null if pattern doesn't match.
+   */
+  private matchPattern(pattern: Pattern, value: RageValue): Map<string, RageValue> | null {
+    switch (pattern.type) {
+      case 'WildcardPattern':
+        // _ matches anything
+        return new Map();
+      
+      case 'LiteralPattern':
+        // Match exact value
+        if (value === pattern.value) {
+          return new Map();
+        }
+        return null;
+      
+      case 'IdentifierPattern': {
+        // Convention: PascalCase identifiers (starting with uppercase) in patterns
+        // are treated as enum variant matches, not bindings
+        const isPascalCase = pattern.name.length > 0 && 
+          pattern.name[0] === pattern.name[0].toUpperCase() &&
+          pattern.name[0] !== pattern.name[0].toLowerCase();
+        
+        if (isPascalCase) {
+          // This should match an enum variant with this name
+          if (!isEnumVariant(value)) {
+            return null;  // Not an enum variant, no match
+          }
+          if (value.variantName !== pattern.name) {
+            return null;  // Different variant name, no match
+          }
+          return new Map();  // Matched!
+        }
+        
+        // lowercase identifiers bind the value to the identifier
+        return new Map([[pattern.name, value]]);
+      }
+      
+      case 'VariantPattern': {
+        // Match enum variant
+        if (!isEnumVariant(value)) {
+          return null;
+        }
+        
+        // Check variant name matches
+        if (value.variantName !== pattern.variantName) {
+          return null;
+        }
+        
+        // Check enum name if specified
+        if (pattern.enumName !== null && value.enumName !== pattern.enumName) {
+          return null;
+        }
+        
+        // Extract bindings from variant data
+        const bindings = new Map<string, RageValue>();
+        const dataEntries = Array.from(value.data.entries());
+        
+        for (let i = 0; i < pattern.bindings.length; i++) {
+          const bindingName = pattern.bindings[i];
+          if (i < dataEntries.length) {
+            bindings.set(bindingName, dataEntries[i][1]);
+          } else {
+            bindings.set(bindingName, null);
+          }
+        }
+        
+        return bindings;
+      }
+      
+      default:
+        return null;
+    }
   }
 
   private evaluateBinary(expr: BinaryExpression): RageValue {
@@ -425,7 +570,12 @@ export class Interpreter {
       return this.callFunction(callee, args);
     }
 
-    throw new Error('Can only call functions');
+    // Enum variant constructor
+    if (isEnumVariantDef(callee)) {
+      return this.callVariantConstructor(callee, args);
+    }
+
+    throw new Error('Can only call functions or enum variant constructors');
   }
 
   private callFunction(fn: RageFunction, args: RageValue[]): RageValue {
@@ -452,6 +602,16 @@ export class Interpreter {
 
     this.currentEnv = prevEnv;
     return null;
+  }
+
+  private callVariantConstructor(variantDef: RageEnumVariantDef, args: RageValue[]): RageValue {
+    const data = new Map<string, RageValue>();
+    
+    for (let i = 0; i < variantDef.fields.length; i++) {
+      data.set(variantDef.fields[i], args[i] ?? null);
+    }
+    
+    return createEnumVariant(variantDef.enumName, variantDef.variantName, data);
   }
 
   private evaluateMember(expr: MemberExpression): RageValue {

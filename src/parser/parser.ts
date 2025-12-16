@@ -6,6 +6,8 @@ import type {
   DrawBlock,
   UpdateBlock,
   FunctionDeclaration,
+  EnumDeclaration,
+  EnumVariant,
   ReturnStatement,
   IfStatement,
   LoopStatement,
@@ -17,6 +19,11 @@ import type {
   CallExpression,
   MemberExpression,
   IndexExpression,
+  ObjectLiteral,
+  ObjectProperty,
+  MatchExpression,
+  MatchArm,
+  Pattern,
   Identifier,
 } from './ast.js';
 
@@ -78,6 +85,11 @@ export class Parser {
     // Check for function declaration
     if (this.check(TokenType.FUN)) {
       return this.functionDeclaration();
+    }
+
+    // Check for enum declaration
+    if (this.check(TokenType.ENUM)) {
+      return this.enumDeclaration();
     }
 
     // Check for return statement
@@ -152,6 +164,42 @@ export class Parser {
   private breakStatement(): BreakStatement {
     this.advance(); // consume 'break'
     return { type: 'BreakStatement' };
+  }
+
+  private enumDeclaration(): EnumDeclaration {
+    this.advance(); // consume 'enum'
+    const name = this.consume(TokenType.IDENTIFIER, "Expected enum name");
+    this.consume(TokenType.LBRACE, "Expected '{' after enum name");
+    
+    const variants: EnumVariant[] = [];
+    
+    if (!this.check(TokenType.RBRACE)) {
+      do {
+        const variantName = this.consume(TokenType.IDENTIFIER, "Expected variant name");
+        const fields: string[] = [];
+        
+        // Check for variant with data: Variant(field1, field2)
+        if (this.match(TokenType.LPAREN)) {
+          if (!this.check(TokenType.RPAREN)) {
+            do {
+              const field = this.consume(TokenType.IDENTIFIER, "Expected field name");
+              fields.push(field.lexeme);
+            } while (this.match(TokenType.COMMA));
+          }
+          this.consume(TokenType.RPAREN, "Expected ')' after variant fields");
+        }
+        
+        variants.push({ name: variantName.lexeme, fields });
+      } while (this.match(TokenType.COMMA));
+    }
+    
+    this.consume(TokenType.RBRACE, "Expected '}' after enum variants");
+    
+    return {
+      type: 'EnumDeclaration',
+      name: name.lexeme,
+      variants,
+    };
   }
 
   private drawBlock(): DrawBlock {
@@ -549,6 +597,16 @@ export class Parser {
       return { type: 'ArrayLiteral', elements };
     }
 
+    if (this.match(TokenType.LBRACE)) {
+      // Object literal: {key: value, ...}
+      return this.objectLiteral();
+    }
+
+    if (this.match(TokenType.MATCH)) {
+      // Match expression
+      return this.matchExpression();
+    }
+
     throw new Error(`Unexpected token: ${this.peek().lexeme} at line ${this.peek().line}`);
   }
 
@@ -589,5 +647,97 @@ export class Parser {
   private consume(type: TokenType, message: string): Token {
     if (this.check(type)) return this.advance();
     throw new Error(`${message}. Got: ${this.peek().lexeme} at line ${this.peek().line}`);
+  }
+
+  private objectLiteral(): ObjectLiteral {
+    // We've already consumed the opening {
+    const properties: ObjectProperty[] = [];
+    
+    if (!this.check(TokenType.RBRACE)) {
+      do {
+        const key = this.consume(TokenType.IDENTIFIER, "Expected property name");
+        this.consume(TokenType.COLON, "Expected ':' after property name");
+        const value = this.expression();
+        properties.push({ key: key.lexeme, value });
+      } while (this.match(TokenType.COMMA));
+    }
+    
+    this.consume(TokenType.RBRACE, "Expected '}' after object properties");
+    
+    return { type: 'ObjectLiteral', properties };
+  }
+
+  private matchExpression(): MatchExpression {
+    // 'match' has already been consumed
+    const subject = this.expression();
+    this.consume(TokenType.LBRACE, "Expected '{' after match subject");
+    
+    const arms: MatchArm[] = [];
+    
+    if (!this.check(TokenType.RBRACE)) {
+      do {
+        const pattern = this.pattern();
+        this.consume(TokenType.FAT_ARROW, "Expected '=>' after pattern");
+        const body = this.expression();
+        arms.push({ pattern, body });
+      } while (this.match(TokenType.COMMA));
+    }
+    
+    this.consume(TokenType.RBRACE, "Expected '}' after match arms");
+    
+    return { type: 'MatchExpression', subject, arms };
+  }
+
+  private pattern(): Pattern {
+    // Wildcard pattern: _
+    if (this.match(TokenType.UNDERSCORE)) {
+      return { type: 'WildcardPattern' };
+    }
+    
+    // Literal patterns: numbers, strings, booleans
+    if (this.match(TokenType.NUMBER)) {
+      return { type: 'LiteralPattern', value: this.previous().literal as number };
+    }
+    
+    if (this.match(TokenType.STRING)) {
+      return { type: 'LiteralPattern', value: this.previous().literal as string };
+    }
+    
+    if (this.match(TokenType.TRUE)) {
+      return { type: 'LiteralPattern', value: true };
+    }
+    
+    if (this.match(TokenType.FALSE)) {
+      return { type: 'LiteralPattern', value: false };
+    }
+    
+    // Identifier or Variant pattern
+    if (this.match(TokenType.IDENTIFIER)) {
+      const name = this.previous().lexeme;
+      
+      // Check if it's a variant pattern: Name(binding1, binding2)
+      if (this.match(TokenType.LPAREN)) {
+        const bindings: string[] = [];
+        if (!this.check(TokenType.RPAREN)) {
+          do {
+            const binding = this.consume(TokenType.IDENTIFIER, "Expected binding name");
+            bindings.push(binding.lexeme);
+          } while (this.match(TokenType.COMMA));
+        }
+        this.consume(TokenType.RPAREN, "Expected ')' after variant bindings");
+        
+        return {
+          type: 'VariantPattern',
+          enumName: null,  // Will be inferred from match subject type
+          variantName: name,
+          bindings,
+        };
+      }
+      
+      // Otherwise it's a simple identifier pattern (binds to the value)
+      return { type: 'IdentifierPattern', name };
+    }
+    
+    throw new Error(`Unexpected pattern at line ${this.peek().line}`);
   }
 }

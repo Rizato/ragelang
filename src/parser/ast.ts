@@ -7,6 +7,7 @@ export type ASTNode =
   | DrawBlock
   | UpdateBlock
   | FunctionDeclaration
+  | EnumDeclaration
   | ReturnStatement
   | IfStatement
   | LoopStatement
@@ -25,7 +26,9 @@ export type ASTNode =
   | StringLiteral
   | BooleanLiteral
   | ArrayLiteral
-  | PrototypeExpression;
+  | ObjectLiteral
+  | PrototypeExpression
+  | MatchExpression;
 
 export interface Program {
   type: 'Program';
@@ -36,6 +39,7 @@ export type Statement =
   | DrawBlock
   | UpdateBlock
   | FunctionDeclaration
+  | EnumDeclaration
   | ReturnStatement
   | IfStatement
   | LoopStatement
@@ -56,7 +60,9 @@ export type Expression =
   | StringLiteral
   | BooleanLiteral
   | ArrayLiteral
-  | PrototypeExpression;
+  | ObjectLiteral
+  | PrototypeExpression
+  | MatchExpression;
 
 export interface DrawBlock {
   type: 'DrawBlock';
@@ -177,4 +183,67 @@ export interface ArrayLiteral {
 
 export interface PrototypeExpression {
   type: 'PrototypeExpression';
+}
+
+// Object literal: {key: value, key2: value2}
+export interface ObjectLiteral {
+  type: 'ObjectLiteral';
+  properties: ObjectProperty[];
+}
+
+export interface ObjectProperty {
+  key: string;
+  value: Expression;
+}
+
+// Enum declaration: enum State { Idle, Running(speed), Jumping(height, velocity) }
+export interface EnumDeclaration {
+  type: 'EnumDeclaration';
+  name: string;
+  variants: EnumVariant[];
+}
+
+export interface EnumVariant {
+  name: string;
+  fields: string[];  // Empty for unit variants, field names for data variants
+}
+
+// Match expression with pattern matching
+export interface MatchExpression {
+  type: 'MatchExpression';
+  subject: Expression;
+  arms: MatchArm[];
+}
+
+export interface MatchArm {
+  pattern: Pattern;
+  body: Expression;
+}
+
+// Pattern types for match expressions
+export type Pattern =
+  | WildcardPattern      // _
+  | LiteralPattern       // 42, "hello", true
+  | IdentifierPattern    // x (binds to value)
+  | VariantPattern;      // SomeEnum::Variant(x, y)
+
+export interface WildcardPattern {
+  type: 'WildcardPattern';
+}
+
+export interface LiteralPattern {
+  type: 'LiteralPattern';
+  value: number | string | boolean;
+}
+
+export interface IdentifierPattern {
+  type: 'IdentifierPattern';
+  name: string;
+}
+
+export interface VariantPattern {
+  type: 'VariantPattern';
+  enumName: string | null;  // Optional enum name (for fully qualified)
+  variantName: string;
+  bindings: string[];  // Names to bind extracted values to
 }

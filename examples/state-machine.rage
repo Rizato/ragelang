@@ -1,0 +1,92 @@
+// State machine example using enums and match
+// | | | | | | | | | | | | | | | | | | | | | |
+
+// Define game states as an enum
+enum GameState {
+  Menu,
+  Playing(level, score),
+  Paused,
+  GameOver(finalScore)
+}
+// | | | | | | | | | | | | |
+
+// Initialize state
+state = Menu
+frame = 0
+// | | | | |
+
+// Helper function using match expression
+fun state_color(s) {
+  return match s {
+    Menu => "#3498db",
+    Playing(lvl, sc) => "#2ecc71",
+    Paused => "#f1c40f",
+    GameOver(sc) => "#e74c3c"
+  }
+}
+// | | | | | | | | | | | |
+
+fun state_message(s) {
+  return match s {
+    Menu => "Press SPACE to start",
+    Playing(lvl, sc) => "Playing!",
+    Paused => "Game Paused",
+    GameOver(sc) => "Game Over"
+  }
+}
+// | | | | | | | | | | | | |
+
+// Object literal for player data
+player = {
+  x: 100,
+  y: 300,
+  lives: 3,
+  score: 0
+}
+// | | | | | |
+
+draw {
+  color = state_color(state)
+  clear(color)
+  
+  msg = state_message(state)
+  text(msg, 200, 200, 32, "#ffffff")
+  
+  // Draw player if playing
+  match state {
+    Playing(lvl, sc) => sprite(null, player.x, player.y, 32, 32, "#ffffff"),
+    _ => 0
+  }
+}
+// | | | | | | | | | | | | | | | | | | | | |
+
+update(dt) {
+  frame = frame + 1
+  
+  // Auto-transition for demo (every 3 seconds)
+  if (frame % 180 == 0) {
+    state = match state {
+      Menu => Playing(1, 0),
+      Playing(lvl, sc) => Paused,
+      Paused => GameOver(player.score),
+      GameOver(sc) => Menu
+    }
+    
+    // Reset player on new game
+    if (frame % 720 == 0) {
+      player.score = 0
+      player.lives = 3
+    }
+  }
+  
+  // Update player if playing
+  match state {
+    Playing(lvl, sc) => {
+      player.score = player.score + 1
+    },
+    _ => 0
+  }
+}
+// | | | | | | | | | | | | | | | | | | | |
+##########################################
+
