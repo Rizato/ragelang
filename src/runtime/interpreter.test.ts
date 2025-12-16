@@ -1051,5 +1051,76 @@ slice_neg = s[-3:]
     expect(env.get('last')).toBe('o');
     expect(env.get('slice_neg')).toBe('llo');
   });
+
+  // Keyword argument tests
+  it('should support keyword arguments in user functions', () => {
+    const interpreter = runProgram(`
+fun greet(name, greeting) {
+  return greeting + ", " + name
+}
+result = greet(greeting="Hello", name="World")
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe('Hello, World');
+  });
+
+  it('should support mixed positional and keyword arguments', () => {
+    const interpreter = runProgram(`
+fun add(a, b, c) {
+  return a + b + c
+}
+result = add(1, c=3, b=2)
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(6);
+  });
+
+  it('should support keyword arguments with defaults', () => {
+    const interpreter = runProgram(`
+fun make_point(x, y, z) {
+  return {x: x, y: y, z: z}
+}
+p = make_point(10, z=30, y=20)
+px = p.x
+py = p.y
+pz = p.z
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('px')).toBe(10);
+    expect(env.get('py')).toBe(20);
+    expect(env.get('pz')).toBe(30);
+  });
+
+  it('should support keyword arguments in builtin functions', () => {
+    const interpreter = runProgram(`
+arr = [3, 1, 2]
+result = slice(arr, end=2)
+length = len(result)
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('length')).toBe(2);
+  });
+
+  it('should support passing prototypes to functions', () => {
+    const interpreter = runProgram(`
+fun draw_entity(entity) {
+  return entity.x + entity.y
+}
+player = {x: 100, y: 200}
+result = draw_entity(player)
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(300);
+  });
+
+  it('should support prototype properties as keyword args', () => {
+    const interpreter = runProgram(`
+config = {width: 64, height: 32}
+arr = array(size=config.width)
+result = len(arr)
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(64);
+  });
 });
 

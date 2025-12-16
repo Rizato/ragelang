@@ -65,8 +65,21 @@ export class CanvasRenderer {
 
   /**
    * Draw a sprite on the canvas
-   * sprite(path, x, y, width, height, color)
-   * If path is null/empty, draws a colored rectangle
+   * sprite(path, x, y, width, height, sx, sy, sw, sh, color)
+   * 
+   * @param path - Image path (null for colored rectangle)
+   * @param x - Destination X on canvas
+   * @param y - Destination Y on canvas  
+   * @param width - Destination width on canvas
+   * @param height - Destination height on canvas
+   * @param sx - Source X in sprite sheet (optional, for sprite sheets)
+   * @param sy - Source Y in sprite sheet (optional)
+   * @param sw - Source width in sprite sheet (optional)
+   * @param sh - Source height in sprite sheet (optional)
+   * @param color - Color for placeholder or tint (optional)
+   * 
+   * If path is null/empty, draws a colored rectangle.
+   * If sx/sy/sw/sh are provided, extracts that region from the sprite sheet.
    */
   sprite(
     path: string | null,
@@ -74,6 +87,10 @@ export class CanvasRenderer {
     y: number,
     width: number = 32,
     height: number = 32,
+    sx: number | null = null,
+    sy: number | null = null,
+    sw: number | null = null,
+    sh: number | null = null,
     color: string = '#ffffff'
   ): void {
     if (!this.ctx) return;
@@ -105,11 +122,21 @@ export class CanvasRenderer {
     }
 
     if (spriteData.loaded) {
-      // Draw the image, optionally scaled
-      if (width && height) {
-        this.ctx.drawImage(spriteData.image, x, y, width, height);
+      // Check if we're extracting from a sprite sheet
+      if (sx !== null && sy !== null && sw !== null && sh !== null) {
+        // Draw from sprite sheet region
+        this.ctx.drawImage(
+          spriteData.image,
+          sx, sy, sw, sh,  // Source rectangle
+          x, y, width, height  // Destination rectangle
+        );
       } else {
-        this.ctx.drawImage(spriteData.image, x, y);
+        // Draw the entire image, optionally scaled
+        if (width && height) {
+          this.ctx.drawImage(spriteData.image, x, y, width, height);
+        } else {
+          this.ctx.drawImage(spriteData.image, x, y);
+        }
       }
     } else {
       // Draw placeholder while loading

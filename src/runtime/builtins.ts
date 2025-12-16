@@ -71,14 +71,22 @@ export function createBuiltins(renderer: CanvasRenderer): Map<string, BuiltinFun
     return null;
   });
 
-  // sprite(path, x, y, width, height, color)
-  // If path is empty/null, draws a colored rectangle
+  // sprite(path, x, y, width, height, sx, sy, sw, sh, color)
+  // path: image path (null for colored rectangle)
+  // x, y: destination position on canvas
+  // width, height: destination size on canvas
+  // sx, sy, sw, sh: source rectangle from sprite sheet (optional)
+  // color: placeholder/fallback color
   builtins.set('sprite', (
     path: RageValue,
     x: RageValue,
     y: RageValue,
     width: RageValue = 32,
     height: RageValue = 32,
+    sx: RageValue = null,
+    sy: RageValue = null,
+    sw: RageValue = null,
+    sh: RageValue = null,
     color: RageValue = '#ffffff'
   ) => {
     renderer.sprite(
@@ -87,6 +95,10 @@ export function createBuiltins(renderer: CanvasRenderer): Map<string, BuiltinFun
       Number(y), 
       Number(width),
       Number(height),
+      sx !== null ? Number(sx) : null,
+      sy !== null ? Number(sy) : null,
+      sw !== null ? Number(sw) : null,
+      sh !== null ? Number(sh) : null,
       String(color)
     );
     return null;

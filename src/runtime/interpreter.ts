@@ -559,35 +559,131 @@ export class Interpreter {
     }
   }
 
+  // Parameter names for built-in functions (for keyword argument support)
+  private static BUILTIN_PARAMS: Record<string, string[]> = {
+    'sprite': ['path', 'x', 'y', 'width', 'height', 'sx', 'sy', 'sw', 'sh', 'color'],
+    'text': ['text', 'x', 'y', 'size', 'color'],
+    'rect': ['x', 'y', 'width', 'height', 'color'],
+    'circle': ['x', 'y', 'radius', 'color'],
+    'line': ['x1', 'y1', 'x2', 'y2', 'color', 'width'],
+    'clear': ['color'],
+    'min': ['a', 'b'],
+    'max': ['a', 'b'],
+    'clamp': ['value', 'min', 'max'],
+    'lerp': ['a', 'b', 't'],
+    'distance': ['x1', 'y1', 'x2', 'y2'],
+    'rect_overlap': ['x1', 'y1', 'w1', 'h1', 'x2', 'y2', 'w2', 'h2'],
+    'randomInt': ['min', 'max'],
+    'push': ['arr', 'value'],
+    'insert': ['arr', 'index', 'value'],
+    'remove': ['arr', 'value'],
+    'extend': ['arr', 'other'],
+    'count': ['arr', 'value'],
+    'index': ['arr', 'value'],
+    'contains': ['arr', 'value'],
+    'slice': ['arr', 'start', 'end'],
+    'join': ['arr', 'separator'],
+    'array': ['size'],
+  };
+
   private evaluateCall(expr: CallExpression): RageValue {
     const callee = this.evaluate(expr.callee);
-    const args = expr.arguments.map(arg => this.evaluate(arg));
+    
+    // Separate positional and keyword arguments
+    const positionalArgs: RageValue[] = [];
+    const keywordArgs: Map<string, RageValue> = new Map();
+    
+    for (const arg of expr.arguments) {
+      const value = this.evaluate(arg.value);
+      if (arg.name === null) {
+        positionalArgs.push(value);
+      } else {
+        keywordArgs.set(arg.name, value);
+      }
+    }
 
     // Built-in function
     if (typeof callee === 'function') {
+      // Try to get parameter names for this builtin
+      let builtinName: string | null = null;
+      if (expr.callee.type === 'Identifier') {
+        builtinName = (expr.callee as Identifier).name;
+      }
+      
+      const params = builtinName ? Interpreter.BUILTIN_PARAMS[builtinName] : null;
+      const args = this.resolveArgs(positionalArgs, keywordArgs, params);
       return callee(...args);
     }
 
     // User-defined function
     if (isRageFunction(callee)) {
-      return this.callFunction(callee, args);
+      return this.callFunction(callee, positionalArgs, keywordArgs);
     }
 
     // Enum variant constructor
     if (isEnumVariantDef(callee)) {
+      const args = this.resolveArgs(positionalArgs, keywordArgs, callee.fields);
       return this.callVariantConstructor(callee, args);
     }
 
     throw new Error('Can only call functions or enum variant constructors');
   }
 
-  private callFunction(fn: RageFunction, args: RageValue[]): RageValue {
+  /**
+   * Resolve positional and keyword arguments into a single argument array
+   */
+  private resolveArgs(
+    positional: RageValue[],
+    keyword: Map<string, RageValue>,
+    params: string[] | null
+  ): RageValue[] {
+    if (keyword.size === 0) {
+      return positional;
+    }
+    
+    if (!params) {
+      // No parameter info - just append keyword values after positional
+      return [...positional, ...keyword.values()];
+    }
+    
+    // Build args array, filling in keyword args at correct positions
+    const args: RageValue[] = [...positional];
+    
+    // Extend array to accommodate keyword args
+    for (const [name, value] of keyword) {
+      const idx = params.indexOf(name);
+      if (idx === -1) {
+        throw new Error(`Unknown keyword argument: ${name}`);
+      }
+      // Ensure array is long enough
+      while (args.length <= idx) {
+        args.push(null);
+      }
+      args[idx] = value;
+    }
+    
+    return args;
+  }
+
+  private callFunction(
+    fn: RageFunction, 
+    positionalArgs: RageValue[], 
+    keywordArgs: Map<string, RageValue>
+  ): RageValue {
     // Create new environment with closure as parent
     const fnEnv = new Environment(fn.closure as Environment);
     
-    // Bind parameters to arguments
+    // First, bind positional arguments
     for (let i = 0; i < fn.parameters.length; i++) {
-      fnEnv.define(fn.parameters[i], args[i] ?? null);
+      fnEnv.define(fn.parameters[i], positionalArgs[i] ?? null);
+    }
+    
+    // Then, override with keyword arguments
+    for (const [name, value] of keywordArgs) {
+      if (!fn.parameters.includes(name)) {
+        throw new Error(`Unknown keyword argument: ${name} for function ${fn.name}`);
+      }
+      fnEnv.define(name, value);
     }
 
     const prevEnv = this.currentEnv;

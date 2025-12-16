@@ -572,11 +572,26 @@ export class Parser {
   }
 
   private finishCall(callee: Expression): CallExpression {
-    const args: Expression[] = [];
+    const args: { name: string | null; value: Expression }[] = [];
+    let seenKeyword = false;
 
     if (!this.check(TokenType.RPAREN)) {
       do {
-        args.push(this.expression());
+        // Check for keyword argument: identifier = expression
+        // We need to look ahead to distinguish `x=5` from `x==5`
+        if (this.check(TokenType.IDENTIFIER) && this.peekNext()?.type === TokenType.EQUAL) {
+          const name = this.advance().lexeme;  // consume identifier
+          this.advance();  // consume =
+          const value = this.expression();
+          args.push({ name, value });
+          seenKeyword = true;
+        } else {
+          // Positional argument
+          if (seenKeyword) {
+            throw new Error(`Positional argument cannot follow keyword argument at line ${this.peek().line}`);
+          }
+          args.push({ name: null, value: this.expression() });
+        }
       } while (this.match(TokenType.COMMA));
     }
 
@@ -587,6 +602,11 @@ export class Parser {
       callee,
       arguments: args,
     };
+  }
+
+  private peekNext(): Token | null {
+    if (this.current + 1 >= this.tokens.length) return null;
+    return this.tokens[this.current + 1];
   }
 
   private primary(): Expression {

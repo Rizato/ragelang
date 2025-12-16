@@ -143,7 +143,13 @@ export interface UnaryExpression {
 export interface CallExpression {
   type: 'CallExpression';
   callee: Expression;
-  arguments: Expression[];
+  arguments: CallArgument[];
+}
+
+// Call argument can be positional or keyword
+export interface CallArgument {
+  name: string | null;  // null for positional, string for keyword
+  value: Expression;
 }
 
 export interface MemberExpression {
