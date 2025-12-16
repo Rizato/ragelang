@@ -25,6 +25,8 @@
       --border-color: #2a2a3a;
       --success: #4ade80;
       --error: #f87171;
+      --line-number-bg: #0a0a0f;
+      --fallen-highlight: rgba(255, 51, 102, 0.25);
     }
 
     body {
@@ -103,22 +105,79 @@
       flex-direction: column;
     }
 
-    #editor {
+    .code-editor {
       flex: 1;
+      display: flex;
+      background: var(--bg-editor);
+      overflow: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .line-numbers {
+      padding: 1rem 0;
+      background: var(--line-number-bg);
+      color: var(--text-secondary);
+      text-align: right;
+      user-select: none;
+      border-right: 1px solid var(--border-color);
+      min-width: 50px;
+    }
+
+    .line-numbers .line-num {
+      padding: 0 0.75rem;
+      display: block;
+    }
+
+    .code-content {
+      flex: 1;
+      position: relative;
+    }
+
+    #editor {
+      width: 100%;
+      height: 100%;
       font-family: 'JetBrains Mono', monospace;
       font-size: 14px;
       line-height: 1.6;
       padding: 1rem;
-      background: var(--bg-editor);
+      background: transparent;
       color: var(--text-primary);
       border: none;
       resize: none;
       outline: none;
       tab-size: 2;
+      white-space: pre;
+      overflow: auto;
     }
 
     #editor::placeholder {
       color: var(--text-secondary);
+    }
+
+    .processed-view {
+      display: none;
+      width: 100%;
+      height: 100%;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      padding: 1rem;
+      background: transparent;
+      color: var(--text-primary);
+      white-space: pre;
+      overflow: auto;
+    }
+
+    .processed-view.visible {
+      display: block;
+    }
+
+    .fallen-char {
+      background: var(--fallen-highlight);
+      color: var(--accent-red);
+      border-radius: 2px;
     }
 
     .output-container {
@@ -212,22 +271,6 @@
       gap: 0.5rem;
     }
 
-    .processed-view {
-      display: none;
-      flex: 1;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 13px;
-      padding: 1rem;
-      background: var(--bg-editor);
-      color: var(--accent-yellow);
-      white-space: pre;
-      overflow: auto;
-    }
-
-    .processed-view.visible {
-      display: block;
-    }
-
     .tabs {
       display: flex;
       gap: 0;
@@ -281,11 +324,16 @@
           <button class="btn btn-primary" id="run-btn">▶ Run</button>
         </div>
       </div>
-      <textarea id="editor" placeholder="Write your Ragelang code here...
+      <div class="code-editor">
+        <div class="line-numbers" id="source-line-numbers"></div>
+        <div class="code-content">
+          <textarea id="editor" placeholder="Write your Ragelang code here...
 
 Remember: Characters must be supported by characters beneath them!
 Use # to create the foundation."></textarea>
-      <div id="processed" class="processed-view"></div>
+          <div id="processed" class="processed-view"></div>
+        </div>
+      </div>
     </div>
     
     <div class="panel output-container">
@@ -305,7 +353,6 @@ Use # to create the foundation."></textarea>
 
   <script type="module">
     // Import the Ragelang interpreter
-    // In production, this would be the built version
     import { Ragelang, FallingProcessor } from '../dist/index.js';
 
     const editor = document.getElementById('editor');
@@ -316,8 +363,10 @@ Use # to create the foundation."></textarea>
     const stopBtn = document.getElementById('stop-btn');
     const clearBtn = document.getElementById('clear-btn');
     const tabs = document.querySelectorAll('.tab');
+    const lineNumbers = document.getElementById('source-line-numbers');
 
     let ragelang = null;
+    let currentTab = 'source';
 
     // Sample program
     editor.value = `// A simple bouncing ball
@@ -351,6 +400,13 @@ update(dt) {
 }
 ##################################################`;
 
+    function updateLineNumbers(text) {
+      const lines = text.split('\n');
+      lineNumbers.innerHTML = lines.map((_, i) => 
+        `<span class="line-num">${i + 1}</span>`
+      ).join('');
+    }
+
     function log(message, type = 'info') {
       const line = document.createElement('div');
       line.className = `console-line ${type}`;
@@ -370,13 +426,86 @@ update(dt) {
       log(args.join(' '));
     };
 
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
     function updateProcessedView() {
       try {
-        const processor = new FallingProcessor(editor.value);
+        const source = editor.value;
+        const processor = new FallingProcessor(source);
+        
+        // Get original grid positions
+        const sourceLines = source.split('\n');
+        const sourceGrid = sourceLines.map(line => line.split(''));
+        
+        // Get processed result
         const processed = processor.process();
-        processedView.textContent = processed || '(empty - no foundation found)';
+        
+        if (!processed) {
+          processedView.innerHTML = '<span style="color: var(--text-secondary)">(empty - no foundation found)</span>';
+          updateLineNumbers('');
+          return;
+        }
+
+        // Create a new processor to get the processed grid
+        const processor2 = new FallingProcessor(source);
+        processor2.process();
+        const processedLines = processed.split('\n');
+        
+        // Build a map of original character positions
+        const originalPositions = new Map();
+        for (let row = 0; row < sourceLines.length; row++) {
+          for (let col = 0; col < sourceLines[row].length; col++) {
+            const char = sourceLines[row][col];
+            if (char !== ' ') {
+              const key = `${row},${col}`;
+              originalPositions.set(key, char);
+            }
+          }
+        }
+        
+        // Find which characters have moved (fallen)
+        const fallenPositions = new Set();
+        for (let row = 0; row < processedLines.length; row++) {
+          for (let col = 0; col < processedLines[row].length; col++) {
+            const char = processedLines[row][col];
+            if (char !== ' ') {
+              const key = `${row},${col}`;
+              const originalChar = sourceLines[row]?.[col];
+              // If this position has a different char than original, it's fallen
+              if (originalChar !== char) {
+                fallenPositions.add(key);
+              }
+            }
+          }
+        }
+        
+        // Render processed view with highlighting
+        let html = '';
+        for (let row = 0; row < processedLines.length; row++) {
+          const line = processedLines[row];
+          for (let col = 0; col < line.length; col++) {
+            const char = line[col];
+            const key = `${row},${col}`;
+            if (fallenPositions.has(key) && char !== ' ') {
+              html += `<span class="fallen-char">${escapeHtml(char)}</span>`;
+            } else {
+              html += escapeHtml(char);
+            }
+          }
+          html += '\n';
+        }
+        
+        processedView.innerHTML = html;
+        updateLineNumbers(processed);
       } catch (e) {
-        processedView.textContent = `Error: ${e.message}`;
+        processedView.innerHTML = `<span style="color: var(--error)">Error: ${escapeHtml(e.message)}</span>`;
       }
     }
 
@@ -403,16 +532,29 @@ update(dt) {
       }
     }
 
+    // Sync scroll between editor and line numbers
+    editor.addEventListener('scroll', () => {
+      lineNumbers.scrollTop = editor.scrollTop;
+    });
+
+    // Update line numbers on input
+    editor.addEventListener('input', () => {
+      if (currentTab === 'source') {
+        updateLineNumbers(editor.value);
+      }
+    });
+
     // Tab switching
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
         tabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
         
-        const tabName = tab.dataset.tab;
-        if (tabName === 'source') {
+        currentTab = tab.dataset.tab;
+        if (currentTab === 'source') {
           editor.style.display = 'block';
           processedView.classList.remove('visible');
+          updateLineNumbers(editor.value);
         } else {
           editor.style.display = 'none';
           processedView.classList.add('visible');
@@ -427,11 +569,11 @@ update(dt) {
       editor.value = '';
       stop();
       clearConsole();
+      updateLineNumbers('');
     });
 
-    // Initial processed view update
-    updateProcessedView();
+    // Initial line numbers
+    updateLineNumbers(editor.value);
   </script>
 </body>
 </html>
-
