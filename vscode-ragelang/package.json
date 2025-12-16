@@ -1,0 +1,141 @@
+{
+  "name": "ragelang",
+  "displayName": "Ragelang",
+  "description": "Language support for Ragelang - a language where unsupported characters fall",
+  "version": "0.1.0",
+  "publisher": "ragelang",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:ragelang"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "ragelang",
+        "aliases": [
+          "Ragelang",
+          "rage"
+        ],
+        "extensions": [
+          ".rage"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "ragelang",
+        "scopeName": "source.ragelang",
+        "path": "./syntaxes/ragelang.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "ragelang.showFallingPreview",
+        "title": "Ragelang: Open Preview to the Side",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "ragelang.togglePreview",
+        "title": "Ragelang: Toggle Preview",
+        "icon": "$(preview)"
+      },
+      {
+        "command": "ragelang.toggleFallingHighlight",
+        "title": "Ragelang: Toggle Falling Character Highlighting",
+        "icon": "$(eye)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "ragelang.togglePreview",
+        "key": "ctrl+shift+v",
+        "mac": "cmd+shift+v",
+        "when": "editorLangId == ragelang"
+      },
+      {
+        "command": "ragelang.showFallingPreview",
+        "key": "ctrl+k v",
+        "mac": "cmd+k v",
+        "when": "editorLangId == ragelang"
+      },
+      {
+        "command": "ragelang.toggleFallingHighlight",
+        "key": "ctrl+shift+h",
+        "mac": "cmd+shift+h",
+        "when": "editorLangId == ragelang"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "ragelang.showFallingPreview",
+          "when": "editorLangId == ragelang",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "ragelang.showFallingPreview",
+          "when": "editorLangId == ragelang"
+        },
+        {
+          "command": "ragelang.togglePreview",
+          "when": "editorLangId == ragelang"
+        },
+        {
+          "command": "ragelang.toggleFallingHighlight",
+          "when": "editorLangId == ragelang"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Ragelang",
+      "properties": {
+        "ragelang.enableFallingHighlight": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable highlighting of unsupported (falling) characters"
+        },
+        "ragelang.fallingHighlightColor": {
+          "type": "string",
+          "default": "rgba(255, 100, 100, 0.3)",
+          "description": "Background color for falling characters"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "lint": "eslint src --ext ts",
+    "package": "npx @vscode/vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "@vscode/vsce": "^3.7.1",
+    "eslint": "^8.54.0",
+    "typescript": "^5.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ragelang/ragelang"
+  },
+  "keywords": [
+    "ragelang",
+    "game",
+    "falling characters",
+    "programming language"
+  ]
+}

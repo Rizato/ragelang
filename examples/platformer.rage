@@ -1,0 +1,136 @@
+// Simple platformer with controls
+//  | | | | | | | | | | | | | | |
+//   | | | | | | | | | |   |   |
+player = prototype() //     | |
+player.x = 100 //  | |       |
+player.y = 300 //   |       |
+player.vel_y = 0 // |      |
+player.on_ground = true //|
+//  | | | | | | | | | | | |
+gravity = 800 //   |   | |
+jump_force = -400 //    |
+move_speed = 200 //     |
+// | | | | | | | |      |
+ground_y = 350 //       |
+// | | | | | | |        |
+// Trail system         |
+trail = [] //  |        |
+trail_max = 8 //        |
+//  | | | | | |         |
+// Helper function     |
+fun apply_gravity(dt) {
+ // | | | | | | | | | | 
+  if (player.on_ground == false) {
+   // | | | | | | | | | | | | |  | 
+    player.vel_y = player.vel_y + gravity * dt
+  } //  | | | | | | | | | | | | | | | | | | |
+} // |   | | | | | | | | | |   | |   |   | |
+// | |    | | | | | | | | |     | | | | | | 
+// Store position for trail      |   |   |
+fun update_trail() { // | |       | | | |
+ // Only add trail  | |  | |       |   |
+  if (player.on_ground == false) { // |
+   // Add current position to trail  |
+    pos = prototype() //  | | | | | |
+    pos.x = player.x //    |   |   | 
+    pos.y = player.y //     | | | | 
+    push(trail, pos) //      |   |
+    // Limit trail length     | |
+    loop { //  | | | | |       |
+     // | | |   | | | |        | 
+      if (len(trail) <= trail_max) {
+       //  | | | | | | | | | | | | | 
+        break //  |   |   |   |   |
+      } // | | | | | | | | | | | |
+      // Remove oldest  | |   | |
+      trail = trail[1:] // | | |
+    } // |  | | | | | | | |   |
+  } // | |   | | | |   | | | |
+} // | | |    |   |     |   |
+// | | | |     | |       | |
+draw { //       |         |
+ // | | |       |         |
+  clear("#2d3436") //     |
+  // Draw ground | |      |
+  rect(0, ground_y, 600, 50, "#636e72")
+  // Draw trail when jumping | | | | |
+  if (len(trail) > 0) { // |  | | | |
+   // | | | | | | | | | | |    |   | 
+    i = 0 // | | | | | | |      | |
+    loop { //   | |   | |        | 
+     // | | |    | | | |         |
+      if (i >= len(trail)) { // |
+       // | | | | | | | | | | | |
+        break // | | | | | | | |
+      } //  | | | | | | | | | |
+      pos = trail[i] //| | | |
+      // Cosine alpha falloff
+      t = i / trail_max // |
+      alpha = cos(t * 1.5708) * 0.6
+      // Cyan trail with alpha | | |
+      rect(pos.x, pos.y, 32, 32, "#00cec9", alpha)
+      i = i + 1 //  | | | | | | | | | | | | | | |
+    } //   | | | | | | | | | | | | | | | | | | |
+  } //  | | | | | | | | | | | | | | | | | | | |
+  // Draw player | | | | | | | | | | | | | | |
+  rect(player.x, player.y, 32, 32, "#00cec9")
+  // Instructions  | | | | | | | | | | | | | | |
+  text("Arrows/WASD to move, Space to jump", 10, 30, 16, "#dfe6e9")
+} //  | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | |
+// |   | | | | | | | |   | | | | | |   | | | | | |   |   |   |   |
+update(dt) { // | | |     |   |   |     |   |   |     | | | | | |
+ //  | | | | | | | |       | | | |       | | | |       |   |   |  
+  // Apply gravity  |       |   |         |   |         | | | |
+  apply_gravity(dt) //       | |           | |           |   | 
+  // Left/right movement      |             |             | |
+  if (key_held("ArrowLeft")) { //           |              |
+   // | | | | | | | | | | | | | |           |              |
+    player.x = player.x - move_speed * dt //               |
+  } // |  | | | | | | | | | | | | | | | | |                |
+  if (key_held("ArrowRight")) { // | | | |                 |
+   // | | | | | | | | | | | | | | | | | |                  |
+    player.x = player.x + move_speed * dt //               |
+  } //  | | | | | | | | | | | | | | | | | |                |
+  if (key_held("a")) { //  | | | | | | | |                 |
+   // | | | | | | | | | | | | | | | | | |                  |
+    player.x = player.x - move_speed * dt //               |
+  } //  | | | | | | | | | | | | | | | | | |                |
+  if (key_held("d")) { //  | | | | | | | |                 |
+   // | | | | | | | | | | | | | | | | | |                  |
+    player.x = player.x + move_speed * dt //               |
+  } //  | | | | | | | | | | | | | | | | | |                |
+  // Jump  | |   |   |   | |   | | | | | |                 |
+  if (pressed("jump")) { //     |   |   |                  |
+   //  | | | | | | | | | |       | | | |                   |
+    if (player.on_ground) { //    |   |                    |
+     //  | | | | | | | | | | |     | |                     |
+      player.vel_y = jump_force //  |                      | 
+      player.on_ground = false //   |                      | 
+      // Clear trail on new jump    |                      | 
+      trail = [] //   | | | | |     |                      | 
+    } //| | | | | |    | | | |      |                      | 
+  } // | | | | | |      |   |       |                      | 
+  // Update trail        | |        |                      | 
+  update_trail() //       |         |                      | 
+  // Update vertical      |         |                      |
+  player.y = player.y + player.vel_y * dt //               |
+  // Keep player in bounds  | | | | | | | |                |
+  if (player.x < 0) { // | |   | | | | | |                 |
+   // | | | | | | | | | | |     |   |   |                  |
+    player.x = 0 // | | | |      | | | |                   |
+  } // | | | | | | | | | |        |   |                    |
+  if (player.x > 568) { //         | |                     |
+   //  | | | | | | | | | |          |                      |
+    player.x = 568 // | |          |                       |
+  } // | | | | | | | | |          |                        |
+  // Ground collision  |         |                         |
+  if (player.y > ground_y - 32) { //                       |
+   // | | | | | | | | | | | | | | |                        |
+    player.y = ground_y - 32 //| |                         |
+    player.vel_y = 0 // | | | | |                          |
+    player.on_ground = true // |                           |
+    // Clear trail on landing |                            |
+    trail = [] //  | | | | | |                             |
+  } //  | | | | | | | | | | |                              |
+} // | | | | | | | | | | | |                               |
+###########################                                #
