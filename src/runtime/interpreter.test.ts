@@ -1759,5 +1759,170 @@ result = true
     const env = interpreter.getEnvironment();
     expect(env.get('result')).toBe(true);
   });
+
+  // ============ NULL LITERAL TESTS ============
+
+  it('should evaluate null literal', () => {
+    const interpreter = runProgram(`
+x = null
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('x')).toBe(null);
+  });
+
+  it('should compare null with ==', () => {
+    const interpreter = runProgram(`
+x = null
+is_null = x == null
+not_null = 42 == null
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('is_null')).toBe(true);
+    expect(env.get('not_null')).toBe(false);
+  });
+
+  it('should compare null with !=', () => {
+    const interpreter = runProgram(`
+x = null
+y = 42
+x_not_null = x != null
+y_not_null = y != null
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('x_not_null')).toBe(false);
+    expect(env.get('y_not_null')).toBe(true);
+  });
+
+  it('should use null in if condition', () => {
+    const interpreter = runProgram(`
+value = null
+result = "unknown"
+if (value == null) {
+  result = "is null"
+}
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe('is null');
+  });
+
+  it('should match null in pattern', () => {
+    const interpreter = runProgram(`
+value = null
+result = match value {
+  null => "matched null",
+  _ => "not null"
+}
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe('matched null');
+  });
+
+  it('should not match non-null as null', () => {
+    const interpreter = runProgram(`
+value = 42
+result = match value {
+  null => "matched null",
+  _ => "not null"
+}
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe('not null');
+  });
+
+  it('should store null in array', () => {
+    const interpreter = runProgram(`
+arr = [1, null, 3]
+first = arr[0]
+second = arr[1]
+third = arr[2]
+is_null = second == null
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('first')).toBe(1);
+    expect(env.get('second')).toBe(null);
+    expect(env.get('third')).toBe(3);
+    expect(env.get('is_null')).toBe(true);
+  });
+
+  it('should store null in prototype', () => {
+    const interpreter = runProgram(`
+obj = {name: "test", value: null}
+has_name = obj.name != null
+has_value = obj.value != null
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('has_name')).toBe(true);
+    expect(env.get('has_value')).toBe(false);
+  });
+
+  it('should treat null as falsy', () => {
+    const interpreter = runProgram(`
+value = null
+result = "default"
+if (!value) {
+  result = "null is falsy"
+}
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe('null is falsy');
+  });
+
+  it('should pass null as function argument', () => {
+    const interpreter = runProgram(`
+fun check_null(val) {
+  if (val == null) {
+    return "is null"
+  }
+  return "not null"
+}
+result1 = check_null(null)
+result2 = check_null(42)
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result1')).toBe('is null');
+    expect(env.get('result2')).toBe('not null');
+  });
+
+  it('should return null from function', () => {
+    const interpreter = runProgram(`
+fun get_nothing() {
+  return null
+}
+result = get_nothing()
+is_null = result == null
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(null);
+    expect(env.get('is_null')).toBe(true);
+  });
+
+  it('should use null for optional values pattern', () => {
+    const interpreter = runProgram(`
+fun find_item(items, target) {
+  i = 0
+  loop {
+    if (i >= len(items)) {
+      break
+    }
+    if (items[i] == target) {
+      return items[i]
+    }
+    i = i + 1
+  }
+  return null
+}
+
+items = ["apple", "banana", "cherry"]
+found = find_item(items, "banana")
+not_found = find_item(items, "grape")
+has_banana = found != null
+has_grape = not_found != null
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('found')).toBe('banana');
+    expect(env.get('not_found')).toBe(null);
+    expect(env.get('has_banana')).toBe(true);
+    expect(env.get('has_grape')).toBe(false);
+  });
 });
 
