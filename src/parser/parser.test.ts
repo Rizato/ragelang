@@ -801,5 +801,68 @@ players = []
     expect(ast.body).toHaveLength(2);
     expect((ast.body[0] as FunctionDeclaration).type).toBe('FunctionDeclaration');
   });
+
+  // ============ NULL LITERAL ============
+
+  it('should parse null literal', () => {
+    const ast = parse('x = null');
+
+    const decl = ast.body[0] as VariableDeclaration;
+    expect(decl.type).toBe('VariableDeclaration');
+    expect(decl.init.type).toBe('NullLiteral');
+  });
+
+  it('should parse null in comparison', () => {
+    const ast = parse('result = x == null');
+
+    const decl = ast.body[0] as VariableDeclaration;
+    const expr = decl.init as BinaryExpression;
+    expect(expr.type).toBe('BinaryExpression');
+    expect(expr.operator).toBe('==');
+    expect(expr.right.type).toBe('NullLiteral');
+  });
+
+  it('should parse null in match pattern', () => {
+    const ast = parse(`
+result = match value {
+  null => "no value",
+  _ => "has value"
+}
+`);
+
+    const decl = ast.body[0] as VariableDeclaration;
+    const match = decl.init as MatchExpression;
+    expect(match.type).toBe('MatchExpression');
+    expect(match.arms[0].pattern.type).toBe('LiteralPattern');
+    expect((match.arms[0].pattern as any).value).toBe(null);
+  });
+
+  it('should parse null as function argument', () => {
+    const ast = parse('foo(null, 42, null)');
+
+    const stmt = ast.body[0] as ExpressionStatement;
+    const call = stmt.expression as CallExpression;
+    expect(call.arguments).toHaveLength(3);
+    expect(call.arguments[0].value.type).toBe('NullLiteral');
+    expect(call.arguments[2].value.type).toBe('NullLiteral');
+  });
+
+  it('should parse null in array literal', () => {
+    const ast = parse('arr = [1, null, 3]');
+
+    const decl = ast.body[0] as VariableDeclaration;
+    const arr = decl.init as ArrayLiteral;
+    expect(arr.type).toBe('ArrayLiteral');
+    expect(arr.elements[1].type).toBe('NullLiteral');
+  });
+
+  it('should parse null in object literal', () => {
+    const ast = parse('obj = {value: null}');
+
+    const decl = ast.body[0] as VariableDeclaration;
+    const obj = decl.init as ObjectLiteral;
+    expect(obj.type).toBe('ObjectLiteral');
+    expect(obj.properties[0].value.type).toBe('NullLiteral');
+  });
 });
 

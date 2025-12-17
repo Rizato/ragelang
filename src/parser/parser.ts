@@ -681,6 +681,10 @@ export class Parser {
       return { type: 'BooleanLiteral', value: false };
     }
 
+    if (this.match(TokenType.NULL)) {
+      return { type: 'NullLiteral' };
+    }
+
     if (this.match(TokenType.NUMBER)) {
       return { type: 'NumberLiteral', value: this.previous().literal as number };
     }
@@ -920,6 +924,10 @@ export class Parser {
     
     if (this.match(TokenType.FALSE)) {
       return { type: 'LiteralPattern', value: false };
+    }
+
+    if (this.match(TokenType.NULL)) {
+      return { type: 'LiteralPattern', value: null };
     }
     
     // Identifier or Variant pattern
