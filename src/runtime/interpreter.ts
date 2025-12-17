@@ -408,7 +408,7 @@ export class Interpreter {
     for (const arm of expr.arms) {
       const bindings = this.matchPattern(arm.pattern, subject);
       if (bindings !== null) {
-        // Pattern matched! Create a scope with bindings and evaluate body
+        // Pattern matched! Create a scope with bindings and execute body
         const matchEnv = new Environment(this.currentEnv);
         for (const [name, value] of bindings) {
           matchEnv.define(name, value);
@@ -417,7 +417,13 @@ export class Interpreter {
         const prevEnv = this.currentEnv;
         this.currentEnv = matchEnv;
         try {
-          return this.evaluate(arm.body);
+          // Handle block statement bodies (containing statements)
+          if (arm.body.type === 'BlockStatement') {
+            this.executeBlockStatements(arm.body as BlockStatement);
+            return null; // Block bodies don't return a value
+          }
+          // Handle expression bodies
+          return this.evaluate(arm.body as Expression);
         } finally {
           this.currentEnv = prevEnv;
         }

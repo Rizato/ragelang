@@ -798,7 +798,7 @@ export class Parser {
       do {
         const pattern = this.pattern();
         this.consume(TokenType.FAT_ARROW, "Expected '=>' after pattern");
-        const body = this.expression();
+        const body = this.matchArmBody();
         arms.push({ pattern, body });
       } while (this.match(TokenType.COMMA));
     }
@@ -806,6 +806,97 @@ export class Parser {
     this.consume(TokenType.RBRACE, "Expected '}' after match arms");
     
     return { type: 'MatchExpression', subject, arms };
+  }
+
+  /**
+   * Parse the body of a match arm.
+   * Could be either a block statement { ... } or a single expression.
+   * 
+   * To distinguish between object literal { key: value } and block { statement },
+   * we use lookahead:
+   * - If we see { followed by IDENTIFIER followed by COLON, it's likely an object literal
+   * - Otherwise, if we see { followed by IDENTIFIER followed by EQUAL or other statement-starters, 
+   *   it's a block statement
+   */
+  private matchArmBody(): Expression | BlockStatement {
+    if (this.check(TokenType.LBRACE)) {
+      // Look ahead to determine if this is a block or object literal
+      // Save current position for potential backtracking
+      const isBlock = this.isBlockNotObjectLiteral();
+      
+      if (isBlock) {
+        // Parse as block statement
+        this.advance(); // consume '{'
+        return this.blockStatement();
+      }
+    }
+    
+    // Otherwise parse as expression (includes object literals)
+    return this.expression();
+  }
+
+  /**
+   * Lookahead to determine if { starts a block statement or object literal.
+   * 
+   * Block indicators (after LBRACE):
+   * - Empty block: }
+   * - Control flow: if, loop, match, return, break
+   * - Assignment: IDENTIFIER = (not IDENTIFIER :)
+   * - Function call: IDENTIFIER ( 
+   * - Expression starting with non-identifier
+   * 
+   * Object literal indicators:
+   * - IDENTIFIER COLON (the key: value pattern)
+   */
+  private isBlockNotObjectLiteral(): boolean {
+    // We're looking at {, check what follows
+    const next = this.peekNext();
+    
+    if (!next) return false;
+    
+    // Empty block: { }
+    if (next.type === TokenType.RBRACE) {
+      return true;
+    }
+    
+    // Control flow keywords indicate a block
+    if (next.type === TokenType.IF ||
+        next.type === TokenType.LOOP ||
+        next.type === TokenType.MATCH ||
+        next.type === TokenType.RETURN ||
+        next.type === TokenType.BREAK) {
+      return true;
+    }
+    
+    // If it's an identifier, check the token after that
+    if (next.type === TokenType.IDENTIFIER) {
+      const afterIdent = this.peekAt(2);
+      if (!afterIdent) return false;
+      
+      // Object literal: identifier followed by colon
+      if (afterIdent.type === TokenType.COLON) {
+        return false; // It's an object literal
+      }
+      
+      // Block statement indicators: =, +=, -=, etc., or function call (
+      // If not a colon, assume it's a statement in a block
+      return true;
+    }
+    
+    // Non-identifier expressions like literals, arrays, etc. - 
+    // these would be unusual in an object literal key position
+    // but let the expression parser handle it
+    return false;
+  }
+
+  /**
+   * Peek at token at offset from current position.
+   * offset 0 = current token, 1 = next token, etc.
+   */
+  private peekAt(offset: number): Token | null {
+    const idx = this.current + offset;
+    if (idx >= this.tokens.length) return null;
+    return this.tokens[idx];
   }
 
   private pattern(): Pattern {
