@@ -495,7 +495,18 @@ export class InputManager {
 
   // ============ Event Handlers ============
 
+  // Keys that should have default behavior prevented when game is active
+  private readonly GAME_KEYS = new Set([
+    'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+    'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyZ', 'KeyX'
+  ]);
+
   private onKeyDown = (e: KeyboardEvent): void => {
+    // Prevent default for game control keys (stops spacebar scrolling, arrow key scrolling, etc.)
+    if (this.GAME_KEYS.has(e.code)) {
+      e.preventDefault();
+    }
+    
     if (!this.keysDown.has(e.code)) {
       this.keysPressedBuffer.add(e.code);  // Write to buffer
     }
@@ -503,6 +514,11 @@ export class InputManager {
   };
 
   private onKeyUp = (e: KeyboardEvent): void => {
+    // Prevent default for game control keys
+    if (this.GAME_KEYS.has(e.code)) {
+      e.preventDefault();
+    }
+    
     this.keysDown.delete(e.code);
     this.keysReleasedBuffer.add(e.code);  // Write to buffer
   };
