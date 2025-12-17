@@ -279,12 +279,37 @@ export class Parser {
   private assignment(): Expression {
     const expr = this.logicalOr();
 
-    if (this.match(TokenType.EQUAL)) {
+    // Check for all assignment operators
+    if (this.match(
+      TokenType.EQUAL,
+      TokenType.PLUS_EQUAL,
+      TokenType.MINUS_EQUAL,
+      TokenType.STAR_EQUAL,
+      TokenType.SLASH_EQUAL,
+      TokenType.PERCENT_EQUAL,
+      TokenType.AMPERSAND_EQUAL,
+      TokenType.PIPE_EQUAL,
+      TokenType.CARET_EQUAL
+    )) {
+      const operatorToken = this.previous();
+      const operatorMap: Record<string, AssignmentExpression['operator']> = {
+        [TokenType.EQUAL]: '=',
+        [TokenType.PLUS_EQUAL]: '+=',
+        [TokenType.MINUS_EQUAL]: '-=',
+        [TokenType.STAR_EQUAL]: '*=',
+        [TokenType.SLASH_EQUAL]: '/=',
+        [TokenType.PERCENT_EQUAL]: '%=',
+        [TokenType.AMPERSAND_EQUAL]: '&=',
+        [TokenType.PIPE_EQUAL]: '|=',
+        [TokenType.CARET_EQUAL]: '^=',
+      };
+      const operator = operatorMap[operatorToken.type];
       const value = this.assignment();
 
       if (expr.type === 'Identifier' || expr.type === 'MemberExpression' || expr.type === 'IndexExpression') {
         return {
           type: 'AssignmentExpression',
+          operator,
           left: expr as Identifier | MemberExpression | IndexExpression,
           right: value,
         };
@@ -492,6 +517,21 @@ export class Parser {
 
   // Unary: !, -, ~
   private unary(): Expression {
+    // Prefix ++/--
+    if (this.match(TokenType.PLUS_PLUS, TokenType.MINUS_MINUS)) {
+      const operator = this.previous().lexeme as '++' | '--';
+      const argument = this.unary();
+      if (argument.type !== 'Identifier' && argument.type !== 'MemberExpression' && argument.type !== 'IndexExpression') {
+        throw new Error('Invalid increment/decrement target');
+      }
+      return {
+        type: 'UpdateExpression',
+        operator,
+        argument: argument as Identifier | MemberExpression | IndexExpression,
+        prefix: true,
+      };
+    }
+
     if (this.match(TokenType.BANG, TokenType.MINUS, TokenType.TILDE)) {
       const operator = this.previous().lexeme;
       const argument = this.unary();
@@ -502,7 +542,27 @@ export class Parser {
       };
     }
 
-    return this.call();
+    return this.postfix();
+  }
+
+  // Handle postfix ++/--
+  private postfix(): Expression {
+    let expr = this.call();
+
+    if (this.match(TokenType.PLUS_PLUS, TokenType.MINUS_MINUS)) {
+      const operator = this.previous().lexeme as '++' | '--';
+      if (expr.type !== 'Identifier' && expr.type !== 'MemberExpression' && expr.type !== 'IndexExpression') {
+        throw new Error('Invalid increment/decrement target');
+      }
+      return {
+        type: 'UpdateExpression',
+        operator,
+        argument: expr as Identifier | MemberExpression | IndexExpression,
+        prefix: false,
+      };
+    }
+
+    return expr;
   }
 
   private call(): Expression {

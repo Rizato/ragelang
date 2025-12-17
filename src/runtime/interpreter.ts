@@ -14,6 +14,7 @@ import type {
   AssignmentExpression,
   BinaryExpression,
   UnaryExpression,
+  UpdateExpression,
   CallExpression,
   MemberExpression,
   IndexExpression,
@@ -378,6 +379,8 @@ export class Interpreter {
         return this.evaluateSlice(expr as SliceExpression);
       case 'AssignmentExpression':
         return this.evaluateAssignment(expr as AssignmentExpression);
+      case 'UpdateExpression':
+        return this.evaluateUpdate(expr as UpdateExpression);
       default:
         throw new Error(`Unknown expression type: ${(expr as Expression).type}`);
     }
@@ -837,8 +840,59 @@ export class Interpreter {
   }
 
   private evaluateAssignment(expr: AssignmentExpression): RageValue {
-    const value = this.evaluate(expr.right);
+    const rightValue = this.evaluate(expr.right);
+    
+    // Get the current value for compound assignments
+    let currentValue: RageValue = null;
+    if (expr.operator !== '=') {
+      if (expr.left.type === 'Identifier') {
+        currentValue = this.currentEnv.get((expr.left as Identifier).name);
+      } else if (expr.left.type === 'MemberExpression') {
+        currentValue = this.evaluateMember(expr.left as MemberExpression);
+      } else if (expr.left.type === 'IndexExpression') {
+        currentValue = this.evaluateIndex(expr.left as IndexExpression);
+      }
+    }
 
+    // Calculate the new value based on operator
+    let value: RageValue;
+    switch (expr.operator) {
+      case '=':
+        value = rightValue;
+        break;
+      case '+=':
+        if (typeof currentValue === 'string' || typeof rightValue === 'string') {
+          value = String(currentValue) + String(rightValue);
+        } else {
+          value = (currentValue as number) + (rightValue as number);
+        }
+        break;
+      case '-=':
+        value = (currentValue as number) - (rightValue as number);
+        break;
+      case '*=':
+        value = (currentValue as number) * (rightValue as number);
+        break;
+      case '/=':
+        value = (currentValue as number) / (rightValue as number);
+        break;
+      case '%=':
+        value = (currentValue as number) % (rightValue as number);
+        break;
+      case '&=':
+        value = (currentValue as number) & (rightValue as number);
+        break;
+      case '|=':
+        value = (currentValue as number) | (rightValue as number);
+        break;
+      case '^=':
+        value = (currentValue as number) ^ (rightValue as number);
+        break;
+      default:
+        throw new Error(`Unknown assignment operator: ${expr.operator}`);
+    }
+
+    // Assign the value
     if (expr.left.type === 'Identifier') {
       const name = (expr.left as Identifier).name;
       this.currentEnv.set(name, value);
@@ -868,6 +922,52 @@ export class Interpreter {
     }
 
     return value;
+  }
+
+  private evaluateUpdate(expr: UpdateExpression): RageValue {
+    // Get current value
+    let currentValue: RageValue;
+    if (expr.argument.type === 'Identifier') {
+      currentValue = this.currentEnv.get((expr.argument as Identifier).name);
+    } else if (expr.argument.type === 'MemberExpression') {
+      currentValue = this.evaluateMember(expr.argument as MemberExpression);
+    } else {
+      currentValue = this.evaluateIndex(expr.argument as IndexExpression);
+    }
+
+    if (typeof currentValue !== 'number') {
+      throw new Error('Increment/decrement requires a number');
+    }
+
+    // Calculate new value
+    const newValue = expr.operator === '++' ? currentValue + 1 : currentValue - 1;
+
+    // Assign new value
+    if (expr.argument.type === 'Identifier') {
+      this.currentEnv.set((expr.argument as Identifier).name, newValue);
+    } else if (expr.argument.type === 'MemberExpression') {
+      const memberExpr = expr.argument as MemberExpression;
+      const object = this.evaluate(memberExpr.object);
+      if (isPrototype(object)) {
+        object[memberExpr.property.name] = newValue;
+      } else {
+        throw new Error('Can only set properties on prototypes');
+      }
+    } else {
+      const indexExpr = expr.argument as IndexExpression;
+      const object = this.evaluate(indexExpr.object);
+      const index = this.evaluate(indexExpr.index);
+      if (Array.isArray(object)) {
+        object[Number(index) | 0] = newValue;
+      } else if (isPrototype(object)) {
+        object[String(index)] = newValue;
+      } else {
+        throw new Error('Can only index-assign to arrays or prototypes');
+      }
+    }
+
+    // Return old or new value depending on prefix/postfix
+    return expr.prefix ? newValue : currentValue;
   }
 
   private isTruthy(value: RageValue): boolean {
