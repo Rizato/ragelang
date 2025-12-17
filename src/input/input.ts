@@ -501,26 +501,53 @@ export class InputManager {
     'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyZ', 'KeyX'
   ]);
 
+  /**
+   * Check if the canvas has focus.
+   * Only capture game keys when the canvas is explicitly focused.
+   * This allows editors/textareas to work without game input interference.
+   */
+  private canvasFocused(): boolean {
+    if (!this.canvas) return true; // If no canvas, assume we should capture (backwards compat)
+    return document.activeElement === this.canvas;
+  }
+
   private onKeyDown = (e: KeyboardEvent): void => {
-    // Prevent default for game control keys (stops spacebar scrolling, arrow key scrolling, etc.)
-    if (this.GAME_KEYS.has(e.code)) {
+    // Only capture game keys when canvas has focus
+    const shouldCapture = this.canvasFocused();
+    
+    // Prevent default for game control keys only when canvas is focused
+    // (stops spacebar scrolling, arrow key scrolling, etc.)
+    if (shouldCapture && this.GAME_KEYS.has(e.code)) {
       e.preventDefault();
     }
     
+    // Always track key state for consistency, but game code should check focus
     if (!this.keysDown.has(e.code)) {
-      this.keysPressedBuffer.add(e.code);  // Write to buffer
+      // Only add to pressed buffer if canvas has focus
+      if (shouldCapture) {
+        this.keysPressedBuffer.add(e.code);  // Write to buffer
+      }
     }
-    this.keysDown.add(e.code);
+    if (shouldCapture) {
+      this.keysDown.add(e.code);
+    }
   };
 
   private onKeyUp = (e: KeyboardEvent): void => {
-    // Prevent default for game control keys
-    if (this.GAME_KEYS.has(e.code)) {
+    const shouldCapture = this.canvasFocused();
+    
+    // Prevent default for game control keys only when canvas is focused
+    if (shouldCapture && this.GAME_KEYS.has(e.code)) {
       e.preventDefault();
     }
     
-    this.keysDown.delete(e.code);
-    this.keysReleasedBuffer.add(e.code);  // Write to buffer
+    // Only process key up if we were tracking this key
+    if (this.keysDown.has(e.code)) {
+      this.keysDown.delete(e.code);
+      if (shouldCapture) {
+        this.keysReleasedBuffer.add(e.code);  // Write to buffer
+      }
+    }
   };
 
   private onMouseDown = (e: MouseEvent): void => {
