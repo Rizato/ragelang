@@ -947,6 +947,222 @@ msg3 = get_message(GameOver(100))
     expect(env.get('msg3')).toBe('Game over!');
   });
 
+  // ============ MATCH WITH BLOCK BODIES ============
+
+  it('should execute match arm with block body', () => {
+    const interpreter = runProgram(`
+state = "active"
+result = 0
+message = ""
+
+match state {
+  "active" => {
+    result = 42
+    message = "is active"
+  },
+  _ => {
+    result = -1
+    message = "unknown"
+  }
+}
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(42);
+    expect(env.get('message')).toBe('is active');
+  });
+
+  it('should execute match arm block with string concatenation', () => {
+    const interpreter = runProgram(`
+height_cm = 175
+menu_state = "None"
+message = ""
+
+match menu_state {
+  "None" => {
+    message = "Height: " + height_cm + " cm"
+  },
+  _ => {}
+}
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('message')).toBe('Height: 175 cm');
+  });
+
+  it('should execute match arm block with function calls', () => {
+    const interpreter = runProgram(`
+counter = 0
+state = "increment"
+
+fun add_one() {
+  counter = counter + 1
+}
+
+match state {
+  "increment" => {
+    add_one()
+    add_one()
+    add_one()
+  },
+  _ => {}
+}
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('counter')).toBe(3);
+  });
+
+  it('should execute match arm block with if statements', () => {
+    const interpreter = runProgram(`
+value = 15
+result = ""
+
+match true {
+  true => {
+    if (value > 10) {
+      result = "big"
+    } else {
+      result = "small"
+    }
+  },
+  _ => {}
+}
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe('big');
+  });
+
+  it('should execute match arm block with loops', () => {
+    const interpreter = runProgram(`
+mode = "loop"
+sum = 0
+
+match mode {
+  "loop" => {
+    i = 0
+    loop {
+      if (i >= 5) {
+        break
+      }
+      sum = sum + i
+      i = i + 1
+    }
+  },
+  _ => {}
+}
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('sum')).toBe(10); // 0+1+2+3+4
+  });
+
+  it('should handle empty block body in match arm', () => {
+    const interpreter = runProgram(`
+state = "other"
+result = "unchanged"
+
+match state {
+  "active" => {
+    result = "active"
+  },
+  _ => {}
+}
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe('unchanged');
+  });
+
+  it('should match enum with block body', () => {
+    const interpreter = runProgram(`
+enum Status { Loading, Ready, Error(code) }
+
+status = Error(404)
+message = ""
+code_value = 0
+
+match status {
+  Loading => {
+    message = "Please wait"
+  },
+  Ready => {
+    message = "All set"
+  },
+  Error(c) => {
+    message = "Error occurred"
+    code_value = c
+  }
+}
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('message')).toBe('Error occurred');
+    expect(env.get('code_value')).toBe(404);
+  });
+
+  // ============ TIME AND FRAMES BUILTINS ============
+
+  it('should have time() function that returns a number', () => {
+    const interpreter = runProgram(`
+t = time()
+is_positive = t > 0
+`);
+    const env = interpreter.getEnvironment();
+    expect(typeof env.get('t')).toBe('number');
+    expect(env.get('is_positive')).toBe(true);
+  });
+
+  it('should return time in seconds (reasonable range)', () => {
+    const interpreter = runProgram(`
+t = time()
+`);
+    const env = interpreter.getEnvironment();
+    const t = env.get('t') as number;
+    // Should be a Unix timestamp in seconds (around 1.7 billion for 2024)
+    expect(t).toBeGreaterThan(1700000000);
+    expect(t).toBeLessThan(2000000000);
+  });
+
+  it('should have frames() function that returns initial frame count', () => {
+    const interpreter = runProgram(`
+f = frames()
+`);
+    const env = interpreter.getEnvironment();
+    // Before game loop starts, frame count should be 0
+    expect(env.get('f')).toBe(0);
+  });
+
+  it('should use time() for calculations', () => {
+    const interpreter = runProgram(`
+t1 = time()
+t2 = time()
+diff = t2 - t1
+is_small = diff < 1
+`);
+    const env = interpreter.getEnvironment();
+    // Time difference between consecutive calls should be tiny
+    expect(env.get('is_small')).toBe(true);
+  });
+
+  it('should use time() in expressions', () => {
+    const interpreter = runProgram(`
+base_time = time()
+offset = base_time + 3600
+one_hour_later = offset
+`);
+    const env = interpreter.getEnvironment();
+    const base = env.get('base_time') as number;
+    const later = env.get('one_hour_later') as number;
+    expect(later - base).toBeCloseTo(3600, 5);
+  });
+
+  it('should use frames() in expressions', () => {
+    const interpreter = runProgram(`
+f = frames()
+next_frame = f + 1
+doubled = f * 2
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('f')).toBe(0);
+    expect(env.get('next_frame')).toBe(1);
+    expect(env.get('doubled')).toBe(0);
+  });
+
   // Python-like array builtin tests
   it('should sort array in place', () => {
     const interpreter = runProgram(`
