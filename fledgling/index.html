@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fledgling - A Ragelang Game</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow: hidden;
+      background: #000;
+    }
+
+    #game-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #game-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* UI Overlay */
+    #ui-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    #height-display {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: #fff;
+      font-size: 24px;
+      font-weight: bold;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+      pointer-events: none;
+    }
+
+    /* Menu Styles */
+    .menu-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      pointer-events: all;
+    }
+
+    .menu-overlay.active {
+      display: flex;
+    }
+
+    .menu-panel {
+      background: #1a1a2e;
+      border: 2px solid #16213e;
+      border-radius: 12px;
+      padding: 2rem;
+      min-width: 400px;
+      max-width: 600px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .menu-title {
+      color: #fff;
+      font-size: 32px;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+
+    .menu-button {
+      width: 100%;
+      padding: 1rem;
+      margin: 0.5rem 0;
+      background: #0f3460;
+      color: #fff;
+      border: 2px solid #16213e;
+      border-radius: 8px;
+      font-size: 18px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .menu-button:hover {
+      background: #16213e;
+      border-color: #0f3460;
+      transform: translateY(-2px);
+    }
+
+    .menu-button:active {
+      transform: translateY(0);
+    }
+
+    /* Settings Panel */
+    .settings-group {
+      margin: 1.5rem 0;
+    }
+
+    .settings-label {
+      color: #fff;
+      font-size: 16px;
+      margin-bottom: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .slider {
+      flex: 1;
+      height: 8px;
+      background: #16213e;
+      border-radius: 4px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      background: #0f3460;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid #16213e;
+    }
+
+    .slider::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      background: #0f3460;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid #16213e;
+    }
+
+    .slider-value {
+      color: #fff;
+      min-width: 40px;
+      text-align: right;
+    }
+
+    /* Code Editor Panel */
+    #code-editor-container {
+      width: 90vw;
+      height: 90vh;
+      max-width: 1200px;
+      max-height: 800px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #code-editor {
+      flex: 1;
+      background: #0d1117;
+      color: #c9d1d9;
+      border: 2px solid #16213e;
+      border-radius: 8px;
+      padding: 1rem;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      resize: none;
+      outline: none;
+    }
+
+    .editor-buttons {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    /* Confirmation Dialog */
+    .confirm-dialog {
+      background: #1a1a2e;
+      border: 2px solid #16213e;
+      border-radius: 12px;
+      padding: 2rem;
+      min-width: 400px;
+      text-align: center;
+    }
+
+    .confirm-message {
+      color: #fff;
+      font-size: 18px;
+      margin-bottom: 2rem;
+    }
+
+    .confirm-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+    }
+
+    .btn-confirm {
+      padding: 0.75rem 2rem;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 2px solid #16213e;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-confirm.primary {
+      background: #0f3460;
+      color: #fff;
+    }
+
+    .btn-confirm.secondary {
+      background: #16213e;
+      color: #fff;
+    }
+
+    .btn-confirm:hover {
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="game-canvas"></canvas>
+    <div id="ui-overlay">
+      <div id="height-display">Height: 0 cm</div>
+    </div>
+
+    <!-- Pause Menu -->
+    <div id="pause-menu" class="menu-overlay">
+      <div class="menu-panel">
+        <h2 class="menu-title">Paused</h2>
+        <button class="menu-button" id="resume-btn">Resume</button>
+        <button class="menu-button" id="settings-btn">Settings</button>
+        <button class="menu-button" id="edit-code-btn">Edit Code</button>
+      </div>
+    </div>
+
+    <!-- Settings Menu -->
+    <div id="settings-menu" class="menu-overlay">
+      <div class="menu-panel">
+        <h2 class="menu-title">Settings</h2>
+        <div class="settings-group">
+          <div class="settings-label">
+            <span>Sound Effects Volume</span>
+            <span class="slider-value" id="sfx-value">50%</span>
+          </div>
+          <div class="slider-container">
+            <input type="range" min="0" max="100" value="50" class="slider" id="sfx-slider">
+          </div>
+        </div>
+        <div class="settings-group">
+          <div class="settings-label">
+            <span>Music Volume</span>
+            <span class="slider-value" id="music-value">50%</span>
+          </div>
+          <div class="slider-container">
+            <input type="range" min="0" max="100" value="50" class="slider" id="music-slider">
+          </div>
+        </div>
+        <button class="menu-button" id="settings-back-btn">Back</button>
+      </div>
+    </div>
+
+    <!-- Code Editor -->
+    <div id="code-editor-menu" class="menu-overlay">
+      <div class="menu-panel" id="code-editor-container">
+        <h2 class="menu-title">Edit Code</h2>
+        <textarea id="code-editor"></textarea>
+        <div class="editor-buttons">
+          <button class="menu-button" id="code-save-btn">Save & Restart</button>
+          <button class="menu-button" id="code-cancel-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirmation Dialog -->
+    <div id="confirm-dialog" class="menu-overlay">
+      <div class="confirm-dialog">
+        <div class="confirm-message" id="confirm-message">Are you sure?</div>
+        <div class="confirm-buttons">
+          <button class="btn-confirm primary" id="confirm-yes">Yes</button>
+          <button class="btn-confirm secondary" id="confirm-no">No</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="src/game.js"></script>
+</body>
+</html>
+

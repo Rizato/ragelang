@@ -1,0 +1,571 @@
+// Fledgling - A Ragelang Game
+// A fledgling bird must return to its nest at the top of a tree
+
+// Game state
+game_state = "playing"
+nest_y = 50
+nest_x = 4450
+game_won = false
+
+// Player
+player = prototype()
+player.x = 200
+player.y = 800
+player.vel_x = 0
+player.vel_y = 0
+player.width = 24
+player.height = 24
+player.on_ground = false
+player.was_on_ground = false
+player.coyote_time = 0
+player.coyote_time_max = 0.15
+player.jump_buffer = 0
+player.jump_buffer_max = 0.15
+player.glide_buffer = 0
+player.glide_buffer_max = 0.2
+player.is_gliding = false
+player.momentum = 0
+player.momentum_max = 300
+player.momentum_gain = 400
+player.momentum_loss_air = 150
+player.momentum_loss_ground = 200
+
+// Physics constants
+gravity = 900
+jump_force = -450
+glide_force = -200
+glide_gravity = 150
+air_control = 0.6
+ground_control = 1.0
+ground_speed = 180
+air_speed = 120
+
+// Level geometry - platforms
+platforms = []
+
+// Ground section platforms
+push(platforms, {x: 0, y: 850, w: 400, h: 50, type: "ground", friction: 0.8})
+push(platforms, {x: 400, y: 820, w: 80, h: 30, type: "termite", friction: 0.7})
+push(platforms, {x: 500, y: 790, w: 100, h: 30, type: "log", friction: 0.6})
+push(platforms, {x: 620, y: 760, w: 60, h: 30, type: "leaves", friction: 0.5})
+push(platforms, {x: 700, y: 730, w: 50, h: 30, type: "dung", friction: 0.9})
+push(platforms, {x: 770, y: 700, w: 80, h: 30, type: "termite", friction: 0.7})
+push(platforms, {x: 870, y: 670, w: 100, h: 30, type: "log", friction: 0.6})
+push(platforms, {x: 990, y: 640, w: 120, h: 30, type: "ground", friction: 0.8})
+
+// Cliff top
+push(platforms, {x: 1120, y: 600, w: 200, h: 30, type: "ground", friction: 0.8})
+
+// Forest branches - lower
+push(platforms, {x: 1320, y: 550, w: 150, h: 20, type: "branch", friction: 0.6})
+push(platforms, {x: 1500, y: 500, w: 120, h: 20, type: "branch", friction: 0.6})
+push(platforms, {x: 1650, y: 450, w: 100, h: 20, type: "branch", friction: 0.6})
+push(platforms, {x: 1780, y: 400, w: 80, h: 20, type: "branch", friction: 0.6})
+
+// Mossy surfaces (slick)
+push(platforms, {x: 1890, y: 380, w: 60, h: 20, type: "moss", friction: 0.2})
+push(platforms, {x: 1980, y: 360, w: 80, h: 20, type: "moss", friction: 0.2})
+
+// Springy branches (green)
+springy_branches = []
+push(springy_branches, {x: 2100, y: 340, w: 60, h: 20, bounce: 1.5})
+push(springy_branches, {x: 2200, y: 300, w: 60, h: 20, bounce: 1.5})
+push(springy_branches, {x: 2300, y: 260, w: 60, h: 20, bounce: 1.5})
+
+// Higher branches
+push(platforms, {x: 2400, y: 220, w: 100, h: 20, type: "branch", friction: 0.6})
+push(platforms, {x: 2550, y: 180, w: 120, h: 20, type: "branch", friction: 0.6})
+
+// Wind sections (near canopy)
+wind_zones = []
+push(wind_zones, {x: 2700, y: 140, w: 200, h: 100, strength: 80, direction: 1})
+push(wind_zones, {x: 2950, y: 100, w: 200, h: 100, strength: 100, direction: -1})
+push(wind_zones, {x: 3200, y: 60, w: 200, h: 100, strength: 90, direction: 1})
+
+// Swells for gaining altitude
+swells = []
+push(swells, {x: 3500, y: 40, w: 150, h: 80, strength: 120})
+push(swells, {x: 3700, y: 20, w: 150, h: 80, strength: 150})
+push(swells, {x: 3900, y: 10, w: 150, h: 80, strength: 180})
+
+// Final approach to nest
+push(platforms, {x: 4100, y: 30, w: 200, h: 20, type: "branch", friction: 0.6})
+push(platforms, {x: 4350, y: 50, w: 150, h: 20, type: "branch", friction: 0.6})
+
+// Camera
+camera_x = 0
+camera_y = 0
+
+// Screen dimensions (will be set from JS)
+screen_w = 1920
+screen_h = 1080
+
+// Helper function to check collision
+fun check_collision(px, py, pw, ph, bx, by, bw, bh) {
+  return px < bx + bw and px + pw > bx and py < by + bh and py + ph > by
+}
+
+// Helper to get platform at position
+fun get_platform_at(x, y) {
+  i = 0
+  loop {
+    if (i >= len(platforms)) {
+      break
+    }
+    p = platforms[i]
+    if (check_collision(x, y, player.width, player.height, p.x, p.y, p.w, p.h)) {
+      return p
+    }
+    i = i + 1
+  }
+  return null
+}
+
+// Helper to get springy branch at position
+fun get_springy_at(x, y) {
+  i = 0
+  loop {
+    if (i >= len(springy_branches)) {
+      break
+    }
+    b = springy_branches[i]
+    if (check_collision(x, y, player.width, player.height, b.x, b.y, b.w, b.h)) {
+      return b
+    }
+    i = i + 1
+  }
+  return null
+}
+
+// Helper to check if in wind zone
+fun get_wind_at(x, y) {
+  i = 0
+  loop {
+    if (i >= len(wind_zones)) {
+      break
+    }
+    w = wind_zones[i]
+    if (x >= w.x and x < w.x + w.w and y >= w.y and y < w.y + w.h) {
+      return w
+    }
+    i = i + 1
+  }
+  return null
+}
+
+// Helper to check if in swell
+fun get_swell_at(x, y) {
+  i = 0
+  loop {
+    if (i >= len(swells)) {
+      break
+    }
+    s = swells[i]
+    if (x >= s.x and x < s.x + s.w and y >= s.y and y < s.y + s.h) {
+      return s
+    }
+    i = i + 1
+  }
+  return null
+}
+
+// Update coyote time
+fun update_coyote_time(dt) {
+  if (player.on_ground) {
+    player.coyote_time = player.coyote_time_max
+  } else {
+    player.coyote_time = player.coyote_time - dt
+    if (player.coyote_time < 0) {
+      player.coyote_time = 0
+    }
+  }
+}
+
+// Update jump buffer
+fun update_jump_buffer(dt) {
+  if (pressed("jump") or key_pressed("Space")) {
+    player.jump_buffer = player.jump_buffer_max
+  } else {
+    player.jump_buffer = player.jump_buffer - dt
+    if (player.jump_buffer < 0) {
+      player.jump_buffer = 0
+    }
+  }
+}
+
+// Update glide buffer
+fun update_glide_buffer(dt) {
+  if (held("jump") or key_held("Space")) {
+    if (player.vel_y > 0) {
+      player.glide_buffer = player.glide_buffer_max
+    }
+  } else {
+    player.glide_buffer = player.glide_buffer - dt
+    if (player.glide_buffer < 0) {
+      player.glide_buffer = 0
+    }
+  }
+}
+
+// Handle jump
+fun handle_jump() {
+  can_jump = player.on_ground or player.coyote_time > 0
+  if (can_jump and player.jump_buffer > 0) {
+    player.vel_y = jump_force
+    player.on_ground = false
+    player.coyote_time = 0
+    player.jump_buffer = 0
+    player.is_gliding = false
+  }
+}
+
+// Handle glide
+fun handle_glide(dt) {
+  if (player.vel_y > 0 and (held("jump") or key_held("Space") or player.glide_buffer > 0)) {
+    if (not player.on_ground) {
+      player.is_gliding = true
+      player.vel_y = player.vel_y + glide_gravity * dt
+      if (player.vel_y > 200) {
+        player.vel_y = 200
+      }
+    }
+  } else {
+    player.is_gliding = false
+  }
+}
+
+// Handle horizontal movement with momentum
+fun handle_movement(dt) {
+  left_input = held("left") or key_held("KeyA")
+  right_input = held("right") or key_held("KeyD")
+  
+  if (player.on_ground) {
+    // Ground movement
+    if (left_input) {
+      if (player.momentum > 0) {
+        player.momentum = player.momentum - player.momentum_loss_ground * dt
+        if (player.momentum < 0) {
+          player.momentum = 0
+        }
+      }
+      player.momentum = player.momentum - player.momentum_gain * dt
+      if (player.momentum < -player.momentum_max) {
+        player.momentum = -player.momentum_max
+      }
+      player.vel_x = ground_speed * -1 + player.momentum
+    else if (right_input) {
+      if (player.momentum < 0) {
+        player.momentum = player.momentum + player.momentum_loss_ground * dt
+        if (player.momentum > 0) {
+          player.momentum = 0
+        }
+      }
+      player.momentum = player.momentum + player.momentum_gain * dt
+      if (player.momentum > player.momentum_max) {
+        player.momentum = player.momentum_max
+      }
+      player.vel_x = ground_speed + player.momentum
+    else {
+      // Apply friction based on platform type
+      platform = get_platform_at(player.x, player.y + player.height + 1)
+      friction = 0.8
+      if (platform != null) {
+        friction = platform.friction
+      }
+      player.vel_x = player.vel_x * (1 - (1 - friction) * dt * 10)
+      player.momentum = player.momentum * (1 - (1 - friction) * dt * 10)
+      if (abs(player.vel_x) < 10) {
+        player.vel_x = 0
+      }
+      if (abs(player.momentum) < 5) {
+        player.momentum = 0
+      }
+    }
+  else {
+    // Air movement - momentum is sustained
+    if (left_input) {
+      if (player.momentum > 0) {
+        player.momentum = player.momentum - player.momentum_loss_air * dt
+        if (player.momentum < 0) {
+          player.momentum = 0
+        }
+      }
+      player.momentum = player.momentum - player.momentum_gain * dt * air_control
+      if (player.momentum < -player.momentum_max) {
+        player.momentum = -player.momentum_max
+      }
+      player.vel_x = air_speed * -1 + player.momentum
+    else if (right_input) {
+      if (player.momentum < 0) {
+        player.momentum = player.momentum + player.momentum_loss_air * dt
+        if (player.momentum > 0) {
+          player.momentum = 0
+        }
+      }
+      player.momentum = player.momentum + player.momentum_gain * dt * air_control
+      if (player.momentum > player.momentum_max) {
+        player.momentum = player.momentum_max
+      }
+      player.vel_x = air_speed + player.momentum
+    else {
+      // No input - lose momentum in air
+      player.momentum = player.momentum - player.momentum_loss_air * dt * 2
+      if (player.momentum > 0) {
+        if (player.momentum < 5) {
+          player.momentum = 0
+        }
+      else {
+        if (player.momentum > -5) {
+          player.momentum = 0
+        }
+      }
+      player.vel_x = player.momentum
+    }
+  }
+}
+
+// Apply physics
+fun apply_physics(dt) {
+  // Gravity
+  if (not player.is_gliding) {
+    player.vel_y = player.vel_y + gravity * dt
+  }
+  
+  // Wind zones
+  wind = get_wind_at(player.x + player.width / 2, player.y + player.height / 2)
+  if (wind != null) {
+    player.vel_x = player.vel_x + wind.strength * wind.direction * dt
+  }
+  
+  // Swells
+  swell = get_swell_at(player.x + player.width / 2, player.y + player.height / 2)
+  if (swell != null) {
+    player.vel_y = player.vel_y - swell.strength * dt
+  }
+  
+  // Update position
+  player.x = player.x + player.vel_x * dt
+  player.y = player.y + player.vel_y * dt
+}
+
+// Handle collisions
+fun handle_collisions() {
+  player.was_on_ground = player.on_ground
+  player.on_ground = false
+  
+  // Check platform collisions
+  i = 0
+  loop {
+    if (i >= len(platforms)) {
+      break
+    }
+    p = platforms[i]
+    if (check_collision(player.x, player.y, player.width, player.height, p.x, p.y, p.w, p.h)) {
+      // Top collision (landing)
+      if (player.vel_y > 0 and player.y < p.y) {
+        player.y = p.y - player.height
+        player.vel_y = 0
+        player.on_ground = true
+        player.coyote_time = player.coyote_time_max
+      }
+      // Bottom collision (ceiling)
+      else if (player.vel_y < 0 and player.y > p.y + p.h) {
+        player.y = p.y + p.h
+        player.vel_y = 0
+      }
+      // Left collision
+      else if (player.vel_x > 0 and player.x < p.x) {
+        player.x = p.x - player.width
+        player.vel_x = 0
+      }
+      // Right collision
+      else if (player.vel_x < 0 and player.x > p.x + p.w) {
+        player.x = p.x + p.w
+        player.vel_x = 0
+      }
+    }
+    i = i + 1
+  }
+  
+  // Check springy branch collisions
+  springy = get_springy_at(player.x, player.y)
+  if (springy != null and player.vel_y > 0 and player.y < springy.y) {
+    player.y = springy.y - player.height
+    player.vel_y = player.vel_y * -springy.bounce
+    if (player.vel_y < jump_force) {
+      player.vel_y = jump_force
+    }
+    player.on_ground = false
+  }
+  
+  // Check nest collision (win condition)
+  if (check_collision(player.x, player.y, player.width, player.height, nest_x - 20, nest_y - 20, 40, 40)) {
+    game_won = true
+    game_state = "won"
+  }
+}
+
+// Update camera
+fun update_camera() {
+  target_x = player.x - screen_w / 2
+  target_y = player.y - screen_h / 2
+  
+  camera_x = lerp(camera_x, target_x, 0.1)
+  camera_y = lerp(camera_y, target_y, 0.1)
+  
+  // Clamp camera
+  if (camera_x < 0) {
+    camera_x = 0
+  }
+  if (camera_y < 0) {
+    camera_y = 0
+  }
+}
+
+// Get platform color
+fun get_platform_color(platform) {
+  if (platform.type == "ground") {
+    return "#8B4513"
+  else if (platform.type == "termite") {
+    return "#CD853F"
+  else if (platform.type == "log") {
+    return "#654321"
+  else if (platform.type == "leaves") {
+    return "#228B22"
+  else if (platform.type == "dung") {
+    return "#8B4513"
+  else if (platform.type == "branch") {
+    return "#8B4513"
+  else if (platform.type == "moss") {
+    return "#2F4F2F"
+  }
+  return "#808080"
+}
+
+// Draw function
+draw {
+  clear("#87CEEB")
+  
+  // Draw background gradient (sky to ground)
+  i = 0
+  loop {
+    if (i >= screen_h) {
+      break
+    }
+    t = i / screen_h
+    r = lerp(135, 139, t)
+    g = lerp(206, 69, t)
+    b = lerp(250, 19, t)
+    color = rgb(r, g, b)
+    rect(0, i, screen_w, 1, color)
+    i = i + 1
+  }
+  
+  // Draw platforms
+  i = 0
+  loop {
+    if (i >= len(platforms)) {
+      break
+    }
+    p = platforms[i]
+    color = get_platform_color(p)
+    rect(p.x - camera_x, p.y - camera_y, p.w, p.h, color)
+    i = i + 1
+  }
+  
+  // Draw springy branches (green)
+  i = 0
+  loop {
+    if (i >= len(springy_branches)) {
+      break
+    }
+    b = springy_branches[i]
+    rect(b.x - camera_x, b.y - camera_y, b.w, b.h, "#00FF00")
+    i = i + 1
+  }
+  
+  // Draw wind zones (visual indicator)
+  i = 0
+  loop {
+    if (i >= len(wind_zones)) {
+      break
+    }
+    w = wind_zones[i]
+    alpha = 0.3
+    if (w.direction > 0) {
+      color = rgba(200, 200, 255, alpha)
+    else {
+      color = rgba(255, 200, 200, alpha)
+    }
+    rect(w.x - camera_x, w.y - camera_y, w.w, w.h, color)
+    i = i + 1
+  }
+  
+  // Draw swells (visual indicator)
+  i = 0
+  loop {
+    if (i >= len(swells)) {
+      break
+    }
+    s = swells[i]
+    color = rgba(100, 200, 255, 0.4)
+    rect(s.x - camera_x, s.y - camera_y, s.w, s.h, color)
+    i = i + 1
+  }
+  
+  // Draw nest
+  nest_screen_x = nest_x - camera_x
+  nest_screen_y = nest_y - camera_y
+  if (nest_screen_x > -100 and nest_screen_x < screen_w + 100) {
+    circle(nest_screen_x, nest_screen_y, 25, "#FFD700")
+    rect(nest_screen_x - 15, nest_screen_y + 10, 30, 10, "#8B4513")
+  }
+  
+  // Draw player
+  player_screen_x = player.x - camera_x
+  player_screen_y = player.y - camera_y
+  if (player.is_gliding) {
+    // Draw gliding bird (wings spread)
+    circle(player_screen_x + player.width / 2, player_screen_y + player.height / 2, player.width / 2, "#FFA500")
+    rect(player_screen_x - 5, player_screen_y, 10, player.height, "#FFA500")
+  else {
+    // Draw normal bird
+    circle(player_screen_x + player.width / 2, player_screen_y + player.height / 2, player.width / 2, "#FFA500")
+  }
+  
+  // Draw height display (will be updated by JS)
+  height_cm = (screen_h - (player.y - camera_y))
+  text("Height: " + height_cm + " cm", 20, 40, 24, "#FFFFFF")
+  
+  // Draw win message
+  if (game_won) {
+    text("You made it home!", screen_w / 2 - 150, screen_h / 2, 48, "#FFD700")
+  }
+}
+
+// Update function
+update(dt) {
+  if (game_state != "playing") {
+    return
+  }
+  
+  // Update input buffers
+  update_coyote_time(dt)
+  update_jump_buffer(dt)
+  update_glide_buffer(dt)
+  
+  // Handle input
+  handle_jump()
+  handle_glide(dt)
+  handle_movement(dt)
+  
+  // Apply physics
+  apply_physics(dt)
+  
+  // Handle collisions
+  handle_collisions()
+  
+  // Update camera
+  update_camera()
+}
+
