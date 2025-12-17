@@ -60,7 +60,8 @@ export interface RagePrototype {
 export function createBuiltins(
   renderer: CanvasRenderer, 
   audio?: AudioManager,
-  input?: InputManager
+  input?: InputManager,
+  getFrameCount?: () => number
 ): Map<string, BuiltinFunction> {
   const builtins = new Map<string, BuiltinFunction>();
   
@@ -69,6 +70,9 @@ export function createBuiltins(
   
   // Input manager (created lazily if not provided)
   const inputManager = input ?? new InputManager();
+  
+  // Frame counter getter (default to 0 if not provided)
+  const frameGetter = getFrameCount ?? (() => 0);
 
   // Drawing functions
   // text(text, x, y, size, color, alpha)
@@ -188,6 +192,13 @@ export function createBuiltins(
   builtins.set('PI', () => Math.PI);
   builtins.set('TAU', () => Math.PI * 2);  // Full circle
   builtins.set('E', () => Math.E);
+  
+  // Time and frame functions
+  // time() - returns time since epoch in seconds
+  builtins.set('time', () => Date.now() / 1000);
+  
+  // frames() - returns number of frames that have been rendered
+  builtins.set('frames', () => frameGetter());
   
   // Angle conversion
   builtins.set('deg', (radians: RageValue) => Number(radians) * (180 / Math.PI));
