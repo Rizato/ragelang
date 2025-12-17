@@ -408,10 +408,7 @@ export function createBuiltins(
       return arr.map(x => String(x)).join(String(sep));
     }
     return '';
-  });
-
-  // Time helpers (for animations)
-  builtins.set('time', () => performance.now() / 1000);
+  }); 
 
   // Color helpers
   // rgba(r, g, b, a) - creates an rgba color string

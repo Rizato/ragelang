@@ -49,6 +49,134 @@ describe('Interpreter', () => {
     expect(env.get('result')).toBe(20);
   });
 
+  // ============ COMPOUND ASSIGNMENT ============
+
+  it('should execute += compound assignment', () => {
+    const interpreter = runProgram('x = 5\nx += 3');
+    const env = interpreter.getEnvironment();
+    expect(env.get('x')).toBe(8);
+  });
+
+  it('should execute -= compound assignment', () => {
+    const interpreter = runProgram('x = 10\nx -= 3');
+    const env = interpreter.getEnvironment();
+    expect(env.get('x')).toBe(7);
+  });
+
+  it('should execute *= compound assignment', () => {
+    const interpreter = runProgram('x = 5\nx *= 4');
+    const env = interpreter.getEnvironment();
+    expect(env.get('x')).toBe(20);
+  });
+
+  it('should execute /= compound assignment', () => {
+    const interpreter = runProgram('x = 20\nx /= 4');
+    const env = interpreter.getEnvironment();
+    expect(env.get('x')).toBe(5);
+  });
+
+  it('should execute %= compound assignment', () => {
+    const interpreter = runProgram('x = 17\nx %= 5');
+    const env = interpreter.getEnvironment();
+    expect(env.get('x')).toBe(2);
+  });
+
+  it('should execute &= compound assignment', () => {
+    const interpreter = runProgram('x = 7\nx &= 3');
+    const env = interpreter.getEnvironment();
+    expect(env.get('x')).toBe(3); // 0111 & 0011 = 0011
+  });
+
+  it('should execute |= compound assignment', () => {
+    const interpreter = runProgram('x = 4\nx |= 2');
+    const env = interpreter.getEnvironment();
+    expect(env.get('x')).toBe(6); // 0100 | 0010 = 0110
+  });
+
+  it('should execute ^= compound assignment', () => {
+    const interpreter = runProgram('x = 5\nx ^= 3');
+    const env = interpreter.getEnvironment();
+    expect(env.get('x')).toBe(6); // 0101 ^ 0011 = 0110
+  });
+
+  it('should execute += for string concatenation', () => {
+    const interpreter = runProgram('s = "Hello"\ns += " World"');
+    const env = interpreter.getEnvironment();
+    expect(env.get('s')).toBe('Hello World');
+  });
+
+  it('should execute compound assignment on member expressions', () => {
+    const interpreter = runProgram(`
+      obj = prototype()
+      obj.x = 5
+      obj.x += 3
+    `);
+    const env = interpreter.getEnvironment();
+    const obj = env.get('obj') as any;
+    expect(obj.x).toBe(8);
+  });
+
+  it('should execute compound assignment on index expressions', () => {
+    const interpreter = runProgram(`
+      arr = [1, 2, 3]
+      arr[1] += 10
+    `);
+    const env = interpreter.getEnvironment();
+    const arr = env.get('arr') as number[];
+    expect(arr[1]).toBe(12);
+  });
+
+  // ============ INCREMENT/DECREMENT ============
+
+  it('should execute prefix increment', () => {
+    const interpreter = runProgram('x = 5\ny = ++x');
+    const env = interpreter.getEnvironment();
+    expect(env.get('x')).toBe(6);
+    expect(env.get('y')).toBe(6);
+  });
+
+  it('should execute postfix increment', () => {
+    const interpreter = runProgram('x = 5\ny = x++');
+    const env = interpreter.getEnvironment();
+    expect(env.get('x')).toBe(6);
+    expect(env.get('y')).toBe(5);
+  });
+
+  it('should execute prefix decrement', () => {
+    const interpreter = runProgram('x = 5\ny = --x');
+    const env = interpreter.getEnvironment();
+    expect(env.get('x')).toBe(4);
+    expect(env.get('y')).toBe(4);
+  });
+
+  it('should execute postfix decrement', () => {
+    const interpreter = runProgram('x = 5\ny = x--');
+    const env = interpreter.getEnvironment();
+    expect(env.get('x')).toBe(4);
+    expect(env.get('y')).toBe(5);
+  });
+
+  it('should execute increment on member expressions', () => {
+    const interpreter = runProgram(`
+      obj = prototype()
+      obj.count = 10
+      obj.count++
+    `);
+    const env = interpreter.getEnvironment();
+    const obj = env.get('obj') as any;
+    expect(obj.count).toBe(11);
+  });
+
+  it('should execute increment on array elements', () => {
+    const interpreter = runProgram(`
+      arr = [1, 2, 3]
+      arr[0]++
+    `);
+    const env = interpreter.getEnvironment();
+    const arr = env.get('arr') as number[];
+    expect(arr[0]).toBe(2);
+  });
+
   it('should execute prototype creation', () => {
     const interpreter = runProgram('player = prototype()');
     const env = interpreter.getEnvironment();

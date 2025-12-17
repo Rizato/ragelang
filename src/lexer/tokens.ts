@@ -31,6 +31,20 @@ export enum TokenType {
   SLASH = 'SLASH',
   PERCENT = 'PERCENT',
   
+  // Increment/Decrement
+  PLUS_PLUS = 'PLUS_PLUS',       // ++
+  MINUS_MINUS = 'MINUS_MINUS',   // --
+  
+  // Compound Assignment
+  PLUS_EQUAL = 'PLUS_EQUAL',     // +=
+  MINUS_EQUAL = 'MINUS_EQUAL',   // -=
+  STAR_EQUAL = 'STAR_EQUAL',     // *=
+  SLASH_EQUAL = 'SLASH_EQUAL',   // /=
+  PERCENT_EQUAL = 'PERCENT_EQUAL', // %=
+  AMPERSAND_EQUAL = 'AMPERSAND_EQUAL', // &=
+  PIPE_EQUAL = 'PIPE_EQUAL',     // |=
+  CARET_EQUAL = 'CARET_EQUAL',   // ^=
+  
   // Comparison
   EQUAL = 'EQUAL',
   EQUAL_EQUAL = 'EQUAL_EQUAL',

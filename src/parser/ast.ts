@@ -18,6 +18,7 @@ export type ASTNode =
   | AssignmentExpression
   | BinaryExpression
   | UnaryExpression
+  | UpdateExpression
   | CallExpression
   | MemberExpression
   | IndexExpression
@@ -53,6 +54,7 @@ export type Expression =
   | AssignmentExpression
   | BinaryExpression
   | UnaryExpression
+  | UpdateExpression
   | CallExpression
   | MemberExpression
   | IndexExpression
@@ -123,8 +125,17 @@ export interface VariableDeclaration {
 
 export interface AssignmentExpression {
   type: 'AssignmentExpression';
+  operator: '=' | '+=' | '-=' | '*=' | '/=' | '%=' | '&=' | '|=' | '^=';
   left: Identifier | MemberExpression | IndexExpression;
   right: Expression;
+}
+
+// Update expression for ++/-- operators
+export interface UpdateExpression {
+  type: 'UpdateExpression';
+  operator: '++' | '--';
+  argument: Identifier | MemberExpression | IndexExpression;
+  prefix: boolean; // true for ++x, false for x++
 }
 
 export interface BinaryExpression {

@@ -66,6 +66,37 @@ describe('Lexer', () => {
     expect(tokens[11].type).toBe(TokenType.GREATER_EQUAL);
   });
 
+  it('should tokenize compound assignment operators', () => {
+    const lexer = new Lexer('+= -= *= /= %= &= |= ^=');
+    const tokens = lexer.tokenize();
+
+    expect(tokens[0].type).toBe(TokenType.PLUS_EQUAL);
+    expect(tokens[1].type).toBe(TokenType.MINUS_EQUAL);
+    expect(tokens[2].type).toBe(TokenType.STAR_EQUAL);
+    expect(tokens[3].type).toBe(TokenType.SLASH_EQUAL);
+    expect(tokens[4].type).toBe(TokenType.PERCENT_EQUAL);
+    expect(tokens[5].type).toBe(TokenType.AMPERSAND_EQUAL);
+    expect(tokens[6].type).toBe(TokenType.PIPE_EQUAL);
+    expect(tokens[7].type).toBe(TokenType.CARET_EQUAL);
+  });
+
+  it('should tokenize increment and decrement operators', () => {
+    const lexer = new Lexer('++ --');
+    const tokens = lexer.tokenize();
+
+    expect(tokens[0].type).toBe(TokenType.PLUS_PLUS);
+    expect(tokens[1].type).toBe(TokenType.MINUS_MINUS);
+  });
+
+  it('should distinguish between + and ++ and +=', () => {
+    const lexer = new Lexer('+ ++ +=');
+    const tokens = lexer.tokenize();
+
+    expect(tokens[0].type).toBe(TokenType.PLUS);
+    expect(tokens[1].type).toBe(TokenType.PLUS_PLUS);
+    expect(tokens[2].type).toBe(TokenType.PLUS_EQUAL);
+  });
+
   it('should tokenize delimiters', () => {
     const lexer = new Lexer('( ) { } [ ] , . ;');
     const tokens = lexer.tokenize();
@@ -88,8 +119,9 @@ describe('Lexer', () => {
     expect(tokens[0].type).toBe(TokenType.IDENTIFIER);
     expect(tokens[0].lexeme).toBe('foo');
     expect(tokens[1].type).toBe(TokenType.COMMENT);
-    expect(tokens[2].type).toBe(TokenType.IDENTIFIER);
-    expect(tokens[2].lexeme).toBe('bar');
+    expect(tokens[2].type).toBe(TokenType.NEWLINE);
+    expect(tokens[3].type).toBe(TokenType.IDENTIFIER);
+    expect(tokens[3].lexeme).toBe('bar');
   });
 
   it('should tokenize foundation markers', () => {
@@ -128,8 +160,9 @@ update(dt) {
     const lexer = new Lexer('foo\nbar');
     const tokens = lexer.tokenize();
 
-    expect(tokens[0].line).toBe(1);
-    expect(tokens[1].line).toBe(2);
+    expect(tokens[0].line).toBe(1);  // foo
+    expect(tokens[1].type).toBe(TokenType.NEWLINE);
+    expect(tokens[2].line).toBe(2);  // bar
   });
 
   it('should handle empty input', () => {

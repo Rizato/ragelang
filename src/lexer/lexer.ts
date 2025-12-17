@@ -47,14 +47,67 @@ export class Lexer {
       case '.': this.addToken(TokenType.DOT); break;
       case ';': this.addToken(TokenType.SEMICOLON); break;
       case ':': this.addToken(TokenType.COLON); break;
-      case '+': this.addToken(TokenType.PLUS); break;
-      case '-': this.addToken(TokenType.MINUS); break;
-      case '*': this.addToken(this.match('*') ? TokenType.STAR_STAR : TokenType.STAR); break;
-      case '%': this.addToken(TokenType.PERCENT); break;
-      case '^': this.addToken(TokenType.CARET); break;
+      case '+':
+        if (this.match('+')) {
+          this.addToken(TokenType.PLUS_PLUS);
+        } else if (this.match('=')) {
+          this.addToken(TokenType.PLUS_EQUAL);
+        } else {
+          this.addToken(TokenType.PLUS);
+        }
+        break;
+      case '-':
+        if (this.match('-')) {
+          this.addToken(TokenType.MINUS_MINUS);
+        } else if (this.match('=')) {
+          this.addToken(TokenType.MINUS_EQUAL);
+        } else {
+          this.addToken(TokenType.MINUS);
+        }
+        break;
+      case '*':
+        if (this.match('*')) {
+          this.addToken(TokenType.STAR_STAR);
+        } else if (this.match('=')) {
+          this.addToken(TokenType.STAR_EQUAL);
+        } else {
+          this.addToken(TokenType.STAR);
+        }
+        break;
+      case '/':
+        if (this.match('/')) {
+          this.lineComment();
+        } else if (this.match('=')) {
+          this.addToken(TokenType.SLASH_EQUAL);
+        } else {
+          this.addToken(TokenType.SLASH);
+        }
+        break;
+      case '%':
+        this.addToken(this.match('=') ? TokenType.PERCENT_EQUAL : TokenType.PERCENT);
+        break;
+      case '^':
+        this.addToken(this.match('=') ? TokenType.CARET_EQUAL : TokenType.CARET);
+        break;
       case '~': this.addToken(TokenType.TILDE); break;
-      case '&': this.addToken(this.match('&') ? TokenType.AMPERSAND_AMPERSAND : TokenType.AMPERSAND); break;
-      case '|': this.addToken(this.match('|') ? TokenType.PIPE_PIPE : TokenType.PIPE); break;
+      case '&':
+        if (this.match('&')) {
+          this.addToken(TokenType.AMPERSAND_AMPERSAND);
+        } else if (this.match('=')) {
+          this.addToken(TokenType.AMPERSAND_EQUAL);
+        } else {
+          this.addToken(TokenType.AMPERSAND);
+        }
+        break;
+      case '|':
+        if (this.match('|')) {
+          this.addToken(TokenType.PIPE_PIPE);
+        } else if (this.match('=')) {
+          this.addToken(TokenType.PIPE_EQUAL);
+        } else {
+          this.addToken(TokenType.PIPE);
+        }
+        break;
       case '!': this.addToken(this.match('=') ? TokenType.BANG_EQUAL : TokenType.BANG); break;
       case '=':
         if (this.match('=')) {
@@ -83,16 +136,6 @@ export class Lexer {
           this.addToken(TokenType.GREATER);
         }
         break;
-      
-      case '/':
-        if (this.match('/')) {
-          // Line comment
-          this.lineComment();
-        } else {
-          this.addToken(TokenType.SLASH);
-        }
-        break;
-
       case '#':
         // Foundation marker - consume all consecutive # on this position
         this.foundation();
@@ -105,6 +148,7 @@ export class Lexer {
         break;
 
       case '\n':
+        this.addToken(TokenType.NEWLINE);
         this.line++;
         this.column = 1;
         break;
