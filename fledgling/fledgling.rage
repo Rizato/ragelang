@@ -1,11 +1,46 @@
 // Fledgling - A Ragelang Game
 // A fledgling bird must return to its nest at the top of a tree
 
+// State enums
+enum GameState {
+  Playing,
+  Won,
+  Paused
+}
+
+enum MenuState {
+  None,
+  Pause,
+  Settings
+}
+
+enum MenuSelection {
+  Resume,
+  Settings,
+  Back
+}
+
+enum SettingsSelection {
+  SFXVolume,
+  MusicVolume,
+  Back
+}
+
 // Game state
-game_state = "playing"
+game_state = Playing
+menu_state = None
 nest_y = 50
 nest_x = 4450
-game_won = false
+
+// Audio settings (0-10 scale, passed to music() and sound())
+// Use like: music("assets/sounds/music.mp3", music_volume)
+// Use like: sound("assets/sounds/jump.wav", sfx_volume)
+sfx_volume = 5
+music_volume = 5
+
+// Menu selection
+menu_selection = Resume
+settings_selection = SFXVolume
 
 // Player
 player = prototype()
@@ -400,8 +435,7 @@ fun handle_collisions() {
   
   // Check nest collision (win condition)
   if (check_collision(player.x, player.y, player.width, player.height, nest_x - 20, nest_y - 20, 40, 40)) {
-    game_won = true
-    game_state = "won"
+    game_state = Won
   }
 }
 
@@ -533,19 +567,292 @@ draw {
     circle(player_screen_x + player.width / 2, player_screen_y + player.height / 2, player.width / 2, "#FFA500")
   }
   
-  // Draw height display (will be updated by JS)
+  // Draw height display
   height_cm = (screen_h - (player.y - camera_y))
-  text("Height: " + height_cm + " cm", 20, 40, 24, "#FFFFFF")
+  match menu_state {
+    None => {
+      text("Height: " + height_cm + " cm", 20, 40, 24, "#FFFFFF")
+    },
+    _ => {}
+  }
   
   // Draw win message
-  if (game_won) {
-    text("You made it home!", screen_w / 2 - 150, screen_h / 2, 48, "#FFD700")
+  match game_state {
+    Won => {
+      text("You made it home!", screen_w / 2 - 150, screen_h / 2, 48, "#FFD700")
+    },
+    _ => {}
+  }
+  
+  // Draw menus
+  match menu_state {
+    Pause => draw_pause_menu(),
+    Settings => draw_settings_menu(),
+    _ => {}
+  }
+}
+
+// Draw pause menu
+fun draw_pause_menu() {
+  // Dark overlay
+  rect(0, 0, screen_w, screen_h, rgba(0, 0, 0, 0.85))
+  
+  // Menu panel
+  panel_x = screen_w / 2 - 200
+  panel_y = screen_h / 2 - 150
+  panel_w = 400
+  panel_h = 300
+  rect(panel_x, panel_y, panel_w, panel_h, "#1a1a2e")
+  rect(panel_x, panel_y, panel_w, panel_h, "#16213e", 0.5)
+  
+  // Title
+  text("Paused", panel_x + panel_w / 2 - 60, panel_y + 40, 32, "#ffffff")
+  
+  // Menu options
+  draw_menu_option("Resume", panel_x, panel_y, 0, Resume)
+  draw_menu_option("Settings", panel_x, panel_y, 1, Settings)
+  draw_menu_option("Back to Game", panel_x, panel_y, 2, Back)
+}
+
+// Draw a menu option
+fun draw_menu_option(text, panel_x, panel_y, index, option) {
+  y = panel_y + 100 + index * 50
+  color = "#ffffff"
+  is_selected = match menu_selection {
+    Resume => index == 0,
+    Settings => index == 1,
+    Back => index == 2,
+    _ => false
+  }
+  if (is_selected) {
+    color = "#0f3460"
+    rect(panel_x + 20, y - 5, 360, 40, "#0f3460", 0.3)
+  }
+  text(text, panel_x + 50, y + 25, 20, color)
+}
+
+// Draw settings menu
+fun draw_settings_menu() {
+  // Dark overlay
+  rect(0, 0, screen_w, screen_h, rgba(0, 0, 0, 0.85))
+  
+  // Menu panel
+  panel_x = screen_w / 2 - 250
+  panel_y = screen_h / 2 - 200
+  panel_w = 500
+  panel_h = 400
+  rect(panel_x, panel_y, panel_w, panel_h, "#1a1a2e")
+  rect(panel_x, panel_y, panel_w, panel_h, "#16213e", 0.5)
+  
+  // Title
+  text("Settings", panel_x + panel_w / 2 - 70, panel_y + 40, 32, "#ffffff")
+  
+  // SFX Volume
+  sfx_selected = match settings_selection {
+    SFXVolume => true,
+    _ => false
+  }
+  sfx_color = "#ffffff"
+  if (sfx_selected) {
+    sfx_color = "#0f3460"
+  }
+  text("Sound Effects Volume: " + (sfx_volume * 10) + "%", panel_x + 50, panel_y + 100, 18, sfx_color)
+  if (sfx_selected) {
+    rect(panel_x + 20, panel_y + 90, panel_w - 40, 50, "#0f3460", 0.3)
+  }
+  slider_x = panel_x + 50
+  slider_y = panel_y + 130
+  slider_w = panel_w - 100
+  slider_h = 20
+  rect(slider_x, slider_y, slider_w, slider_h, "#16213e")
+  slider_fill_w = (sfx_volume / 10) * slider_w
+  rect(slider_x, slider_y, slider_fill_w, slider_h, "#0f3460")
+  circle(slider_x + slider_fill_w, slider_y + slider_h / 2, 10, "#0f3460")
+  
+  // Music Volume
+  music_y = panel_y + 180
+  music_selected = match settings_selection {
+    MusicVolume => true,
+    _ => false
+  }
+  music_color = "#ffffff"
+  if (music_selected) {
+    music_color = "#0f3460"
+    rect(panel_x + 20, music_y - 5, panel_w - 40, 50, "#0f3460", 0.3)
+  }
+  text("Music Volume: " + (music_volume * 10) + "%", panel_x + 50, music_y + 20, 18, music_color)
+  slider_y2 = panel_y + 210
+  slider_fill_w2 = (music_volume / 10) * slider_w
+  rect(slider_x, slider_y2, slider_w, slider_h, "#16213e")
+  rect(slider_x, slider_y2, slider_fill_w2, slider_h, "#0f3460")
+  circle(slider_x + slider_fill_w2, slider_y2 + slider_h / 2, 10, "#0f3460")
+  
+  // Back button
+  back_y = panel_y + 280
+  back_selected = match settings_selection {
+    Back => true,
+    _ => false
+  }
+  back_color = "#ffffff"
+  if (back_selected) {
+    back_color = "#0f3460"
+    rect(panel_x + 20, back_y - 5, panel_w - 40, 40, "#0f3460", 0.3)
+  }
+  text("Back", panel_x + 50, back_y + 25, 20, back_color)
+}
+
+// Navigate menu selection (cycle through options)
+fun cycle_menu_selection(current, count) {
+  next = match current {
+    Resume => Settings,
+    Settings => Back,
+    Back => Resume,
+    _ => Resume
+  }
+  return next
+}
+
+fun cycle_menu_selection_back(current, count) {
+  prev = match current {
+    Resume => Back,
+    Settings => Resume,
+    Back => Settings,
+    _ => Resume
+  }
+  return prev
+}
+
+// Navigate settings selection
+fun cycle_settings_selection(current) {
+  next = match current {
+    SFXVolume => MusicVolume,
+    MusicVolume => Back,
+    Back => SFXVolume,
+    _ => SFXVolume
+  }
+  return next
+}
+
+fun cycle_settings_selection_back(current) {
+  prev = match current {
+    SFXVolume => Back,
+    MusicVolume => SFXVolume,
+    Back => MusicVolume,
+    _ => SFXVolume
+  }
+  return prev
+}
+
+// Handle menu input
+fun handle_menu_input() {
+  // Open/close pause menu
+  if (pressed("start") or key_pressed("Escape")) {
+    match menu_state {
+      None => {
+        menu_state = Pause
+        menu_selection = Resume
+      },
+      Pause => {
+        menu_state = None
+      },
+      Settings => {
+        menu_state = Pause
+        settings_selection = SFXVolume
+      }
+    }
+  }
+  
+  match menu_state {
+    Pause => {
+      // Navigate pause menu
+      if (pressed("up") or key_pressed("ArrowUp")) {
+        menu_selection = cycle_menu_selection_back(menu_selection, 3)
+      }
+      if (pressed("down") or key_pressed("ArrowDown")) {
+        menu_selection = cycle_menu_selection(menu_selection, 3)
+      }
+      // Select option
+      if (pressed("jump") or key_pressed("Space") or key_pressed("Enter")) {
+        match menu_selection {
+          Resume => menu_state = None,
+          Settings => {
+            menu_state = Settings
+            settings_selection = SFXVolume
+          },
+          Back => menu_state = None,
+          _ => {}
+        }
+      }
+    },
+    Settings => {
+      // Navigate settings
+      if (pressed("up") or key_pressed("ArrowUp")) {
+        settings_selection = cycle_settings_selection_back(settings_selection)
+      }
+      if (pressed("down") or key_pressed("ArrowDown")) {
+        settings_selection = cycle_settings_selection(settings_selection)
+      }
+      
+      // Adjust volumes based on selection
+      match settings_selection {
+        SFXVolume => {
+          if (held("left") or key_held("ArrowLeft") or key_held("KeyA")) {
+            sfx_volume = sfx_volume - 0.5 * dt
+            if (sfx_volume < 0) {
+              sfx_volume = 0
+            }
+          }
+          if (held("right") or key_held("ArrowRight") or key_held("KeyD")) {
+            sfx_volume = sfx_volume + 0.5 * dt
+            if (sfx_volume > 10) {
+              sfx_volume = 10
+            }
+          }
+        },
+        MusicVolume => {
+          if (held("left") or key_held("ArrowLeft") or key_held("KeyA")) {
+            music_volume = music_volume - 0.5 * dt
+            if (music_volume < 0) {
+              music_volume = 0
+            }
+            music_volume(music_volume)
+          }
+          if (held("right") or key_held("ArrowRight") or key_held("KeyD")) {
+            music_volume = music_volume + 0.5 * dt
+            if (music_volume > 10) {
+              music_volume = 10
+            }
+            music_volume(music_volume)
+          }
+        },
+        Back => {
+          if (pressed("jump") or key_pressed("Space") or key_pressed("Enter")) {
+            menu_state = Pause
+            settings_selection = SFXVolume
+          }
+        },
+        _ => {}
+      }
+    },
+    _ => {}
   }
 }
 
 // Update function
 update(dt) {
-  if (game_state != "playing") {
+  // Handle menu input
+  handle_menu_input()
+  
+  // Only update game if playing and not in menu
+  should_update = match menu_state {
+    None => true,
+    _ => false
+  }
+  is_playing = match game_state {
+    Playing => true,
+    _ => false
+  }
+  if (not should_update or not is_playing) {
     return
   }
   

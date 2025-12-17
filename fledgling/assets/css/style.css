@@ -1,0 +1,210 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #000;
+  color: #fff;
+  overflow: hidden;
+}
+
+#game-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+#game-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Code Editor Overlay */
+#code-editor-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.95);
+  display: none;
+  z-index: 1000;
+  pointer-events: all;
+}
+
+#code-editor-overlay.active {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+#code-editor-container {
+  width: 90vw;
+  height: 90vh;
+  max-width: 1400px;
+  max-height: 900px;
+  display: flex;
+  flex-direction: column;
+  background: #1a1a2e;
+  border: 2px solid #16213e;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+#code-editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #16213e;
+}
+
+#code-editor-title {
+  font-size: 24px;
+  color: #fff;
+}
+
+#code-editor {
+  flex: 1;
+  background: #0d1117;
+  color: #c9d1d9;
+  border: 2px solid #16213e;
+  border-radius: 8px;
+  padding: 1rem;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  resize: none;
+  outline: none;
+  tab-size: 2;
+  white-space: pre;
+  overflow: auto;
+}
+
+.editor-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  justify-content: flex-end;
+}
+
+.menu-button {
+  padding: 0.75rem 1.5rem;
+  background: #0f3460;
+  color: #fff;
+  border: 2px solid #16213e;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.menu-button:hover {
+  background: #16213e;
+  border-color: #0f3460;
+  transform: translateY(-2px);
+}
+
+.menu-button:active {
+  transform: translateY(0);
+}
+
+.menu-button.primary {
+  background: #0f3460;
+}
+
+.menu-button.secondary {
+  background: #16213e;
+}
+
+/* Confirmation Dialog */
+#confirm-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  pointer-events: all;
+}
+
+#confirm-dialog.active {
+  display: flex;
+}
+
+.confirm-dialog {
+  background: #1a1a2e;
+  border: 2px solid #16213e;
+  border-radius: 12px;
+  padding: 2rem;
+  min-width: 400px;
+  text-align: center;
+}
+
+.confirm-message {
+  color: #fff;
+  font-size: 18px;
+  margin-bottom: 2rem;
+}
+
+.confirm-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.btn-confirm {
+  padding: 0.75rem 2rem;
+  font-size: 16px;
+  border-radius: 8px;
+  border: 2px solid #16213e;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-confirm.primary {
+  background: #0f3460;
+  color: #fff;
+}
+
+.btn-confirm.secondary {
+  background: #16213e;
+  color: #fff;
+}
+
+.btn-confirm:hover {
+  transform: translateY(-2px);
+}
+
+/* Editor Toggle Button */
+#editor-toggle {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 0.75rem 1.5rem;
+  background: #0f3460;
+  color: #fff;
+  border: 2px solid #16213e;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.2s;
+}
+
+#editor-toggle:hover {
+  background: #16213e;
+  border-color: #0f3460;
+  transform: translateY(-2px);
+}
+
