@@ -7,7 +7,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "bundle": "esbuild src/index.ts --bundle --format=esm --outfile=dist/ragelang.bundle.js --minify",
+    "bundle": "esbuild src/index.ts --bundle --format=iife --global-name=RagelangLib --outfile=dist/ragelang.bundle.js --minify",
     "build:all": "npm run build && npm run bundle",
     "dev": "tsc --watch",
     "test": "vitest",
