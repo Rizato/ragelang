@@ -359,6 +359,8 @@ export class Interpreter {
         return (expr as StringLiteral).value;
       case 'BooleanLiteral':
         return (expr as BooleanLiteral).value;
+      case 'NullLiteral':
+        return null;
       case 'ArrayLiteral':
         return this.evaluateArrayLiteral(expr as ArrayLiteral);
       case 'ObjectLiteral':

@@ -27,6 +27,7 @@ export type ASTNode =
   | NumberLiteral
   | StringLiteral
   | BooleanLiteral
+  | NullLiteral
   | ArrayLiteral
   | ObjectLiteral
   | PrototypeExpression
@@ -63,6 +64,7 @@ export type Expression =
   | NumberLiteral
   | StringLiteral
   | BooleanLiteral
+  | NullLiteral
   | ArrayLiteral
   | ObjectLiteral
   | PrototypeExpression
@@ -203,6 +205,10 @@ export interface BooleanLiteral {
   value: boolean;
 }
 
+export interface NullLiteral {
+  type: 'NullLiteral';
+}
+
 export interface ArrayLiteral {
   type: 'ArrayLiteral';
   elements: Expression[];
@@ -260,7 +266,7 @@ export interface WildcardPattern {
 
 export interface LiteralPattern {
   type: 'LiteralPattern';
-  value: number | string | boolean;
+  value: number | string | boolean | null;
 }
 
 export interface IdentifierPattern {

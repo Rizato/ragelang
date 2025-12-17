@@ -417,5 +417,27 @@ match state {
     const foundations = tokens.filter(t => t.type === TokenType.FOUNDATION);
     expect(foundations.length).toBe(0);
   });
+
+  // ============ NULL KEYWORD ============
+
+  it('should tokenize null keyword', () => {
+    const lexer = new Lexer('x = null');
+    const tokens = lexer.tokenize();
+
+    expect(tokens[0].type).toBe(TokenType.IDENTIFIER);
+    expect(tokens[1].type).toBe(TokenType.EQUAL);
+    expect(tokens[2].type).toBe(TokenType.NULL);
+    expect(tokens[2].lexeme).toBe('null');
+  });
+
+  it('should distinguish null from identifiers starting with null', () => {
+    const lexer = new Lexer('nullable = null');
+    const tokens = lexer.tokenize();
+
+    expect(tokens[0].type).toBe(TokenType.IDENTIFIER);
+    expect(tokens[0].lexeme).toBe('nullable');
+    expect(tokens[2].type).toBe(TokenType.NULL);
+    expect(tokens[2].lexeme).toBe('null');
+  });
 });
 
