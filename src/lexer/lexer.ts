@@ -148,6 +148,7 @@ export class Lexer {
         break;
 
       case '\n':
+        this.addToken(TokenType.NEWLINE);
         this.line++;
         this.column = 1;
         break;

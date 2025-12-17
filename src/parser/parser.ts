@@ -52,9 +52,11 @@ export class Parser {
   private current = 0;
 
   constructor(tokens: Token[]) {
-    // Filter out comments and foundation markers for parsing
+    // Filter out comments, foundation markers, and newlines for parsing
     this.tokens = tokens.filter(
-      t => t.type !== TokenType.COMMENT && t.type !== TokenType.FOUNDATION
+      t => t.type !== TokenType.COMMENT && 
+           t.type !== TokenType.FOUNDATION &&
+           t.type !== TokenType.NEWLINE
     );
   }
 
@@ -258,9 +260,10 @@ export class Parser {
     const expr = this.expression();
 
     // Check if this is a variable declaration (identifier = expression)
+    // Only convert to VariableDeclaration for simple assignment (=), not compound (+=, -=, etc.)
     if (expr.type === 'AssignmentExpression') {
       const assign = expr as AssignmentExpression;
-      if (assign.left.type === 'Identifier') {
+      if (assign.left.type === 'Identifier' && assign.operator === '=') {
         return {
           type: 'VariableDeclaration',
           name: (assign.left as Identifier).name,

@@ -317,6 +317,112 @@ update(dt) {
     expect((assign.left as IndexExpression).type).toBe('IndexExpression');
   });
 
+  // ============ COMPOUND ASSIGNMENT ============
+
+  it('should parse compound assignment +=', () => {
+    const ast = parse('x = 5\nx += 3');
+
+    const stmt = ast.body[1] as ExpressionStatement;
+    const assign = stmt.expression as AssignmentExpression;
+    expect(assign.type).toBe('AssignmentExpression');
+    expect(assign.operator).toBe('+=');
+    expect((assign.left as Identifier).name).toBe('x');
+  });
+
+  it('should parse compound assignment -=', () => {
+    const ast = parse('x = 5\nx -= 3');
+
+    const stmt = ast.body[1] as ExpressionStatement;
+    const assign = stmt.expression as AssignmentExpression;
+    expect(assign.operator).toBe('-=');
+  });
+
+  it('should parse compound assignment *=', () => {
+    const ast = parse('x = 5\nx *= 2');
+
+    const stmt = ast.body[1] as ExpressionStatement;
+    const assign = stmt.expression as AssignmentExpression;
+    expect(assign.operator).toBe('*=');
+  });
+
+  it('should parse compound assignment /=', () => {
+    const ast = parse('x = 10\nx /= 2');
+
+    const stmt = ast.body[1] as ExpressionStatement;
+    const assign = stmt.expression as AssignmentExpression;
+    expect(assign.operator).toBe('/=');
+  });
+
+  it('should parse compound assignment %=', () => {
+    const ast = parse('x = 10\nx %= 3');
+
+    const stmt = ast.body[1] as ExpressionStatement;
+    const assign = stmt.expression as AssignmentExpression;
+    expect(assign.operator).toBe('%=');
+  });
+
+  it('should parse compound assignment &=', () => {
+    const ast = parse('x = 7\nx &= 3');
+
+    const stmt = ast.body[1] as ExpressionStatement;
+    const assign = stmt.expression as AssignmentExpression;
+    expect(assign.operator).toBe('&=');
+  });
+
+  it('should parse compound assignment |=', () => {
+    const ast = parse('x = 4\nx |= 2');
+
+    const stmt = ast.body[1] as ExpressionStatement;
+    const assign = stmt.expression as AssignmentExpression;
+    expect(assign.operator).toBe('|=');
+  });
+
+  it('should parse compound assignment ^=', () => {
+    const ast = parse('x = 5\nx ^= 3');
+
+    const stmt = ast.body[1] as ExpressionStatement;
+    const assign = stmt.expression as AssignmentExpression;
+    expect(assign.operator).toBe('^=');
+  });
+
+  // ============ INCREMENT/DECREMENT ============
+
+  it('should parse prefix increment', () => {
+    const ast = parse('x = 5\ny = ++x');
+
+    const decl = ast.body[1] as VariableDeclaration;
+    expect(decl.init.type).toBe('UpdateExpression');
+    expect((decl.init as any).operator).toBe('++');
+    expect((decl.init as any).prefix).toBe(true);
+  });
+
+  it('should parse postfix increment', () => {
+    const ast = parse('x = 5\ny = x++');
+
+    const decl = ast.body[1] as VariableDeclaration;
+    expect(decl.init.type).toBe('UpdateExpression');
+    expect((decl.init as any).operator).toBe('++');
+    expect((decl.init as any).prefix).toBe(false);
+  });
+
+  it('should parse prefix decrement', () => {
+    const ast = parse('x = 5\ny = --x');
+
+    const decl = ast.body[1] as VariableDeclaration;
+    expect(decl.init.type).toBe('UpdateExpression');
+    expect((decl.init as any).operator).toBe('--');
+    expect((decl.init as any).prefix).toBe(true);
+  });
+
+  it('should parse postfix decrement', () => {
+    const ast = parse('x = 5\ny = x--');
+
+    const decl = ast.body[1] as VariableDeclaration;
+    expect(decl.init.type).toBe('UpdateExpression');
+    expect((decl.init as any).operator).toBe('--');
+    expect((decl.init as any).prefix).toBe(false);
+  });
+
   // ============ SLICE EXPRESSIONS ============
 
   it('should parse slice with start and end', () => {
