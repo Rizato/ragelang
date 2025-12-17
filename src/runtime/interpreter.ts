@@ -121,6 +121,7 @@ export class Interpreter {
   private animationFrameId: number | null = null;
   private lastTime: number = 0;
   private running: boolean = false;
+  private frameCount: number = 0;
 
   constructor(renderer: CanvasRenderer, inputManager?: InputManager) {
     this.globalEnv = new Environment();
@@ -135,7 +136,7 @@ export class Interpreter {
       this.inputManager.setCanvas(ctx.canvas);
     }
     
-    this.builtins = createBuiltins(renderer, undefined, this.inputManager);
+    this.builtins = createBuiltins(renderer, undefined, this.inputManager, () => this.frameCount);
 
     // Add builtins to global environment
     for (const [name, fn] of this.builtins) {
@@ -179,6 +180,9 @@ export class Interpreter {
     const currentTime = performance.now();
     const dt = (currentTime - this.lastTime) / 1000; // Convert to seconds
     this.lastTime = currentTime;
+
+    // Increment frame counter
+    this.frameCount++;
 
     // Update input state at start of frame
     this.inputManager.update();
@@ -404,7 +408,7 @@ export class Interpreter {
     for (const arm of expr.arms) {
       const bindings = this.matchPattern(arm.pattern, subject);
       if (bindings !== null) {
-        // Pattern matched! Create a scope with bindings and evaluate body
+        // Pattern matched! Create a scope with bindings and execute body
         const matchEnv = new Environment(this.currentEnv);
         for (const [name, value] of bindings) {
           matchEnv.define(name, value);
@@ -413,7 +417,13 @@ export class Interpreter {
         const prevEnv = this.currentEnv;
         this.currentEnv = matchEnv;
         try {
-          return this.evaluate(arm.body);
+          // Handle block statement bodies (containing statements)
+          if (arm.body.type === 'BlockStatement') {
+            this.executeBlockStatements(arm.body as BlockStatement);
+            return null; // Block bodies don't return a value
+          }
+          // Handle expression bodies
+          return this.evaluate(arm.body as Expression);
         } finally {
           this.currentEnv = prevEnv;
         }
@@ -637,6 +647,9 @@ export class Interpreter {
     'log': ['x'],
     'log10': ['x'],
     'exp': ['x'],
+    // Time
+    'time': [],
+    'frames': [],
   };
 
   private evaluateCall(expr: CallExpression): RageValue {
@@ -994,6 +1007,7 @@ export class Interpreter {
     this.currentEnv = this.globalEnv;
     this.drawBlock = null;
     this.updateBlock = null;
+    this.frameCount = 0;
 
     // Re-add builtins
     for (const [name, fn] of this.builtins) {

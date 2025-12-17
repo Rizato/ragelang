@@ -244,7 +244,7 @@ export interface MatchExpression {
 
 export interface MatchArm {
   pattern: Pattern;
-  body: Expression;
+  body: Expression | BlockStatement;
 }
 
 // Pattern types for match expressions
