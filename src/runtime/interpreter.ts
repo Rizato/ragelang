@@ -121,6 +121,7 @@ export class Interpreter {
   private animationFrameId: number | null = null;
   private lastTime: number = 0;
   private running: boolean = false;
+  private frameCount: number = 0;
 
   constructor(renderer: CanvasRenderer, inputManager?: InputManager) {
     this.globalEnv = new Environment();
@@ -135,7 +136,7 @@ export class Interpreter {
       this.inputManager.setCanvas(ctx.canvas);
     }
     
-    this.builtins = createBuiltins(renderer, undefined, this.inputManager);
+    this.builtins = createBuiltins(renderer, undefined, this.inputManager, () => this.frameCount);
 
     // Add builtins to global environment
     for (const [name, fn] of this.builtins) {
@@ -179,6 +180,9 @@ export class Interpreter {
     const currentTime = performance.now();
     const dt = (currentTime - this.lastTime) / 1000; // Convert to seconds
     this.lastTime = currentTime;
+
+    // Increment frame counter
+    this.frameCount++;
 
     // Update input state at start of frame
     this.inputManager.update();
@@ -643,6 +647,9 @@ export class Interpreter {
     'log': ['x'],
     'log10': ['x'],
     'exp': ['x'],
+    // Time
+    'time': [],
+    'frames': [],
   };
 
   private evaluateCall(expr: CallExpression): RageValue {
@@ -1000,6 +1007,7 @@ export class Interpreter {
     this.currentEnv = this.globalEnv;
     this.drawBlock = null;
     this.updateBlock = null;
+    this.frameCount = 0;
 
     // Re-add builtins
     for (const [name, fn] of this.builtins) {
