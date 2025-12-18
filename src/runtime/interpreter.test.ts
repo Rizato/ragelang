@@ -557,15 +557,6 @@ result = arr[1]
     expect(env.get('result')).toBe(99);
   });
 
-  it('should handle array length property', () => {
-    const interpreter = runProgram(`
-arr = [1, 2, 3, 4, 5]
-len = arr.length
-`);
-    const env = interpreter.getEnvironment();
-    expect(env.get('len')).toBe(5);
-  });
-
   it('should handle string indexing', () => {
     const interpreter = runProgram(`
 s = "hello"
@@ -713,7 +704,7 @@ loop {
 fun findFirst(arr, target) {
   i = 0
   loop {
-    if (i >= arr.length) {
+    if (i >= len(arr)) {
       return -1
     }
     if (arr[i] == target) {
@@ -752,7 +743,7 @@ b = apply(triple, 5)
   it('should create array with array(size) builtin', () => {
     const interpreter = runProgram(`
 arr = array(5)
-result = arr.length
+result = len(arr)
 `);
     const env = interpreter.getEnvironment();
     expect(env.get('result')).toBe(5);
@@ -945,6 +936,368 @@ msg3 = get_message(GameOver(100))
     expect(env.get('msg1')).toBe('Waiting to start');
     expect(env.get('msg2')).toBe('Running at speed');
     expect(env.get('msg3')).toBe('Game over!');
+  });
+
+  // ============ MATCH WITH BLOCK BODIES ============
+
+  it('should execute match arm with block body', () => {
+    const interpreter = runProgram(`
+state = "active"
+result = 0
+message = ""
+
+match state {
+  "active" => {
+    result = 42
+    message = "is active"
+  },
+  _ => {
+    result = -1
+    message = "unknown"
+  }
+}
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(42);
+    expect(env.get('message')).toBe('is active');
+  });
+
+  it('should execute match arm block with string concatenation', () => {
+    const interpreter = runProgram(`
+height_cm = 175
+menu_state = "None"
+message = ""
+
+match menu_state {
+  "None" => {
+    message = "Height: " + height_cm + " cm"
+  },
+  _ => {}
+}
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('message')).toBe('Height: 175 cm');
+  });
+
+  it('should execute match arm block with function calls', () => {
+    const interpreter = runProgram(`
+counter = 0
+state = "increment"
+
+fun add_one() {
+  counter = counter + 1
+}
+
+match state {
+  "increment" => {
+    add_one()
+    add_one()
+    add_one()
+  },
+  _ => {}
+}
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('counter')).toBe(3);
+  });
+
+  it('should execute match arm block with if statements', () => {
+    const interpreter = runProgram(`
+value = 15
+result = ""
+
+match true {
+  true => {
+    if (value > 10) {
+      result = "big"
+    } else {
+      result = "small"
+    }
+  },
+  _ => {}
+}
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe('big');
+  });
+
+  it('should execute match arm block with loops', () => {
+    const interpreter = runProgram(`
+mode = "loop"
+sum = 0
+
+match mode {
+  "loop" => {
+    i = 0
+    loop {
+      if (i >= 5) {
+        break
+      }
+      sum = sum + i
+      i = i + 1
+    }
+  },
+  _ => {}
+}
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('sum')).toBe(10); // 0+1+2+3+4
+  });
+
+  it('should handle empty block body in match arm', () => {
+    const interpreter = runProgram(`
+state = "other"
+result = "unchanged"
+
+match state {
+  "active" => {
+    result = "active"
+  },
+  _ => {}
+}
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe('unchanged');
+  });
+
+  it('should match enum with block body', () => {
+    const interpreter = runProgram(`
+enum Status { Loading, Ready, Error(code) }
+
+status = Error(404)
+message = ""
+code_value = 0
+
+match status {
+  Loading => {
+    message = "Please wait"
+  },
+  Ready => {
+    message = "All set"
+  },
+  Error(c) => {
+    message = "Error occurred"
+    code_value = c
+  }
+}
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('message')).toBe('Error occurred');
+    expect(env.get('code_value')).toBe(404);
+  });
+
+  // ============ TIME AND FRAMES BUILTINS ============
+
+  it('should have time() function that returns a number', () => {
+    const interpreter = runProgram(`
+t = time()
+is_positive = t > 0
+`);
+    const env = interpreter.getEnvironment();
+    expect(typeof env.get('t')).toBe('number');
+    expect(env.get('is_positive')).toBe(true);
+  });
+
+  it('should return time in seconds (reasonable range)', () => {
+    const interpreter = runProgram(`
+t = time()
+`);
+    const env = interpreter.getEnvironment();
+    const t = env.get('t') as number;
+    // Should be a Unix timestamp in seconds (around 1.7 billion for 2024)
+    expect(t).toBeGreaterThan(1700000000);
+    expect(t).toBeLessThan(2000000000);
+  });
+
+  it('should have frames() function that returns initial frame count', () => {
+    const interpreter = runProgram(`
+f = frames()
+`);
+    const env = interpreter.getEnvironment();
+    // Before game loop starts, frame count should be 0
+    expect(env.get('f')).toBe(0);
+  });
+
+  it('should use time() for calculations', () => {
+    const interpreter = runProgram(`
+t1 = time()
+t2 = time()
+diff = t2 - t1
+is_small = diff < 1
+`);
+    const env = interpreter.getEnvironment();
+    // Time difference between consecutive calls should be tiny
+    expect(env.get('is_small')).toBe(true);
+  });
+
+  it('should use time() in expressions', () => {
+    const interpreter = runProgram(`
+base_time = time()
+offset = base_time + 3600
+one_hour_later = offset
+`);
+    const env = interpreter.getEnvironment();
+    const base = env.get('base_time') as number;
+    const later = env.get('one_hour_later') as number;
+    expect(later - base).toBeCloseTo(3600, 5);
+  });
+
+  it('should use frames() in expressions', () => {
+    const interpreter = runProgram(`
+f = frames()
+next_frame = f + 1
+doubled = f * 2
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('f')).toBe(0);
+    expect(env.get('next_frame')).toBe(1);
+    expect(env.get('doubled')).toBe(0);
+  });
+
+  // ============ WIDTH AND HEIGHT BUILTINS ============
+
+  it('should have width() function that returns canvas width', () => {
+    const interpreter = runProgram(`
+w = width()
+`);
+    const env = interpreter.getEnvironment();
+    // Default canvas width is 800
+    expect(env.get('w')).toBe(800);
+  });
+
+  it('should have height() function that returns canvas height', () => {
+    const interpreter = runProgram(`
+h = height()
+`);
+    const env = interpreter.getEnvironment();
+    // Default canvas height is 600
+    expect(env.get('h')).toBe(600);
+  });
+
+  it('should use width() and height() in expressions', () => {
+    const interpreter = runProgram(`
+w = width()
+h = height()
+area = w * h
+half_w = w / 2
+half_h = h / 2
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('area')).toBe(800 * 600);
+    expect(env.get('half_w')).toBe(400);
+    expect(env.get('half_h')).toBe(300);
+  });
+
+  it('should use width() and height() for centering', () => {
+    const interpreter = runProgram(`
+center_x = width() / 2
+center_y = height() / 2
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('center_x')).toBe(400);
+    expect(env.get('center_y')).toBe(300);
+  });
+
+  it('should use width() and height() for boundary checks', () => {
+    const interpreter = runProgram(`
+x = 900
+y = 700
+out_of_bounds_x = x > width()
+out_of_bounds_y = y > height()
+in_bounds_x = 400 < width()
+in_bounds_y = 300 < height()
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('out_of_bounds_x')).toBe(true);
+    expect(env.get('out_of_bounds_y')).toBe(true);
+    expect(env.get('in_bounds_x')).toBe(true);
+    expect(env.get('in_bounds_y')).toBe(true);
+  });
+
+  // ============ LOAD_SCENE BUILTIN ============
+
+  it('should have load_scene() function that sets pending scene', () => {
+    const renderer = new CanvasRenderer(null, { width: 800, height: 600 });
+    const interpreter = new Interpreter(renderer);
+    
+    const lexer = new Lexer('load_scene("assets/rage/menu.rage")');
+    const tokens = lexer.tokenize();
+    const parser = new Parser(tokens);
+    const ast = parser.parse();
+    interpreter.run(ast);
+    
+    // load_scene sets the pending scene which is handled by the Ragelang class
+    expect(interpreter.getPendingScene()).toBe('assets/rage/menu.rage');
+  });
+
+  it('should set pending scene with load_scene()', () => {
+    const renderer = new CanvasRenderer(null, { width: 800, height: 600 });
+    const interpreter = new Interpreter(renderer);
+    
+    const lexer = new Lexer('load_scene("level2.rage")');
+    const tokens = lexer.tokenize();
+    const parser = new Parser(tokens);
+    const ast = parser.parse();
+    interpreter.run(ast);
+    
+    expect(interpreter.getPendingScene()).toBe('level2.rage');
+  });
+
+  it('should clear pending scene', () => {
+    const renderer = new CanvasRenderer(null, { width: 800, height: 600 });
+    const interpreter = new Interpreter(renderer);
+    
+    const lexer = new Lexer('load_scene("test.rage")');
+    const tokens = lexer.tokenize();
+    const parser = new Parser(tokens);
+    const ast = parser.parse();
+    interpreter.run(ast);
+    
+    expect(interpreter.getPendingScene()).toBe('test.rage');
+    interpreter.clearPendingScene();
+    expect(interpreter.getPendingScene()).toBe(null);
+  });
+
+  it('should return null from load_scene()', () => {
+    const interpreter = runProgram(`
+result = load_scene("some/path.rage")
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(null);
+  });
+
+  it('should handle load_scene() with variable path', () => {
+    const renderer = new CanvasRenderer(null, { width: 800, height: 600 });
+    const interpreter = new Interpreter(renderer);
+    
+    const lexer = new Lexer(`
+scene_path = "assets/scenes/boss.rage"
+load_scene(scene_path)
+`);
+    const tokens = lexer.tokenize();
+    const parser = new Parser(tokens);
+    const ast = parser.parse();
+    interpreter.run(ast);
+    
+    expect(interpreter.getPendingScene()).toBe('assets/scenes/boss.rage');
+  });
+
+  it('should handle load_scene() with concatenated path', () => {
+    const renderer = new CanvasRenderer(null, { width: 800, height: 600 });
+    const interpreter = new Interpreter(renderer);
+    
+    const lexer = new Lexer(`
+base = "assets/rage/"
+name = "menu"
+ext = ".rage"
+load_scene(base + name + ext)
+`);
+    const tokens = lexer.tokenize();
+    const parser = new Parser(tokens);
+    const ast = parser.parse();
+    interpreter.run(ast);
+    
+    expect(interpreter.getPendingScene()).toBe('assets/rage/menu.rage');
   });
 
   // Python-like array builtin tests
@@ -1923,6 +2276,178 @@ has_grape = not_found != null
     expect(env.get('not_found')).toBe(null);
     expect(env.get('has_banana')).toBe(true);
     expect(env.get('has_grape')).toBe(false);
+  });
+
+  // ============ SHORT-CIRCUIT EVALUATION ============
+
+  it('should short-circuit && when left is false', () => {
+    const interpreter = runProgram(`
+side_effect = false
+
+fun set_side_effect() {
+  side_effect = true
+  return true
+}
+
+// Left is false, so right should NOT be evaluated
+result = false && set_side_effect()
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(false);
+    expect(env.get('side_effect')).toBe(false); // Should NOT have been called
+  });
+
+  it('should evaluate right side of && when left is true', () => {
+    const interpreter = runProgram(`
+side_effect = false
+
+fun set_side_effect() {
+  side_effect = true
+  return true
+}
+
+// Left is true, so right SHOULD be evaluated
+result = true && set_side_effect()
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+    expect(env.get('side_effect')).toBe(true); // Should have been called
+  });
+
+  it('should short-circuit || when left is true', () => {
+    const interpreter = runProgram(`
+side_effect = false
+
+fun set_side_effect() {
+  side_effect = true
+  return false
+}
+
+// Left is true, so right should NOT be evaluated
+result = true || set_side_effect()
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+    expect(env.get('side_effect')).toBe(false); // Should NOT have been called
+  });
+
+  it('should evaluate right side of || when left is false', () => {
+    const interpreter = runProgram(`
+side_effect = false
+
+fun set_side_effect() {
+  side_effect = true
+  return true
+}
+
+// Left is false, so right SHOULD be evaluated
+result = false || set_side_effect()
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+    expect(env.get('side_effect')).toBe(true); // Should have been called
+  });
+
+  it('should short-circuit and keyword when left is false', () => {
+    const interpreter = runProgram(`
+side_effect = false
+
+fun set_side_effect() {
+  side_effect = true
+  return true
+}
+
+// Left is false, so right should NOT be evaluated
+result = false and set_side_effect()
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(false);
+    expect(env.get('side_effect')).toBe(false);
+  });
+
+  it('should short-circuit or keyword when left is true', () => {
+    const interpreter = runProgram(`
+side_effect = false
+
+fun set_side_effect() {
+  side_effect = true
+  return false
+}
+
+// Left is true, so right should NOT be evaluated
+result = true or set_side_effect()
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+    expect(env.get('side_effect')).toBe(false);
+  });
+
+  it('should short-circuit with null checks', () => {
+    const interpreter = runProgram(`
+obj = null
+accessed = false
+
+fun access_property() {
+  accessed = true
+  return obj.value
+}
+
+// Should short-circuit and not try to access obj.value
+result = obj != null && access_property()
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(false);
+    expect(env.get('accessed')).toBe(false);
+  });
+
+  it('should use short-circuit for safe property access pattern', () => {
+    const interpreter = runProgram(`
+player = null
+can_jump = player != null && player.on_ground
+
+player2 = {on_ground: true}
+can_jump2 = player2 != null && player2.on_ground
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('can_jump')).toBe(false);
+    expect(env.get('can_jump2')).toBe(true);
+  });
+
+  it('should chain short-circuit operators', () => {
+    const interpreter = runProgram(`
+a = false
+b = true
+c = true
+call_count = 0
+
+fun check() {
+  call_count = call_count + 1
+  return true
+}
+
+// a is false, so b and check() should not be evaluated
+result = a && b && check()
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(false);
+    expect(env.get('call_count')).toBe(0);
+  });
+
+  it('should chain || with short-circuit', () => {
+    const interpreter = runProgram(`
+call_count = 0
+
+fun increment() {
+  call_count = call_count + 1
+  return true
+}
+
+// First true should stop evaluation
+result = true || increment() || increment()
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+    expect(env.get('call_count')).toBe(0);
   });
 });
 

@@ -593,6 +593,111 @@ name = match code {
     expect(match.arms[2].pattern.type).toBe('WildcardPattern');
   });
 
+  // ============ MATCH WITH BLOCK BODIES ============
+
+  it('should parse match arm with block body containing statements', () => {
+    const ast = parse(`
+match state {
+  Active => {
+    message = "Processing"
+    counter = counter + 1
+  },
+  _ => {}
+}
+`);
+
+    const stmt = ast.body[0] as ExpressionStatement;
+    const match = stmt.expression as MatchExpression;
+    expect(match.type).toBe('MatchExpression');
+    expect(match.arms).toHaveLength(2);
+    
+    // First arm should have a BlockStatement body
+    expect(match.arms[0].body.type).toBe('BlockStatement');
+    const blockBody = match.arms[0].body as any;
+    expect(blockBody.body).toHaveLength(2);
+    
+    // Second arm should also be a BlockStatement (empty)
+    expect(match.arms[1].body.type).toBe('BlockStatement');
+  });
+
+  it('should parse match arm with expression body (object literal)', () => {
+    const ast = parse(`
+result = match state {
+  Init => { x: 0, y: 0 },
+  Active => { x: 100, y: 200 },
+  _ => { x: -1, y: -1 }
+}
+`);
+
+    const decl = ast.body[0] as VariableDeclaration;
+    const match = decl.init as MatchExpression;
+    expect(match.type).toBe('MatchExpression');
+    
+    // All arms should have ObjectLiteral bodies
+    expect(match.arms[0].body.type).toBe('ObjectLiteral');
+    expect(match.arms[1].body.type).toBe('ObjectLiteral');
+    expect(match.arms[2].body.type).toBe('ObjectLiteral');
+  });
+
+  it('should distinguish block from object literal in match arms', () => {
+    const ast = parse(`
+match mode {
+  A => { foo = bar },
+  B => { key: value }
+}
+`);
+
+    const stmt = ast.body[0] as ExpressionStatement;
+    const match = stmt.expression as MatchExpression;
+    
+    // First arm: { foo = bar } is an assignment, so it's a block
+    expect(match.arms[0].body.type).toBe('BlockStatement');
+    
+    // Second arm: { key: value } is an object literal
+    expect(match.arms[1].body.type).toBe('ObjectLiteral');
+  });
+
+  it('should parse match arm with block containing function calls', () => {
+    const ast = parse(`
+match menu_state {
+  None => {
+    message = "Height: " + height_cm + " cm"
+    text(message, 20, 40, 24, "#FFFFFF")
+  },
+  _ => {}
+}
+`);
+
+    const stmt = ast.body[0] as ExpressionStatement;
+    const match = stmt.expression as MatchExpression;
+    expect(match.arms[0].body.type).toBe('BlockStatement');
+    
+    const blockBody = match.arms[0].body as any;
+    expect(blockBody.body).toHaveLength(2);
+    expect(blockBody.body[0].type).toBe('VariableDeclaration'); // message = ...
+    expect(blockBody.body[1].type).toBe('ExpressionStatement'); // text(...)
+  });
+
+  it('should parse match arm with block containing if statements', () => {
+    const ast = parse(`
+match state {
+  Processing => {
+    if (count > 0) {
+      result = "has items"
+    }
+  },
+  _ => {}
+}
+`);
+
+    const stmt = ast.body[0] as ExpressionStatement;
+    const match = stmt.expression as MatchExpression;
+    expect(match.arms[0].body.type).toBe('BlockStatement');
+    
+    const blockBody = match.arms[0].body as any;
+    expect(blockBody.body[0].type).toBe('IfStatement');
+  });
+
   // ============ KEYWORD ARGUMENTS ============
 
   it('should parse function calls with keyword arguments', () => {

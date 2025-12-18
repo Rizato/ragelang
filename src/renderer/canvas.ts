@@ -42,6 +42,20 @@ export class CanvasRenderer {
   }
 
   /**
+   * Get canvas width
+   */
+  getWidth(): number {
+    return this.width;
+  }
+
+  /**
+   * Get canvas height
+   */
+  getHeight(): number {
+    return this.height;
+  }
+
+  /**
    * Clear the canvas
    */
   clear(color: string = '#000000'): void {

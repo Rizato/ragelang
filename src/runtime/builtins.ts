@@ -61,7 +61,8 @@ export function createBuiltins(
   renderer: CanvasRenderer, 
   audio?: AudioManager,
   input?: InputManager,
-  getFrameCount?: () => number
+  getFrameCount?: () => number,
+  loadScene?: (path: string) => void
 ): Map<string, BuiltinFunction> {
   const builtins = new Map<string, BuiltinFunction>();
   
@@ -73,6 +74,9 @@ export function createBuiltins(
   
   // Frame counter getter (default to 0 if not provided)
   const frameGetter = getFrameCount ?? (() => 0);
+  
+  // Scene loader (no-op if not provided)
+  const sceneLoader = loadScene ?? (() => {});
 
   // Drawing functions
   // text(text, x, y, size, color, alpha)
@@ -199,6 +203,13 @@ export function createBuiltins(
   
   // frames() - returns number of frames that have been rendered
   builtins.set('frames', () => frameGetter());
+  
+  // Canvas dimensions
+  // width() - returns canvas width in pixels
+  builtins.set('width', () => renderer.getWidth());
+  
+  // height() - returns canvas height in pixels
+  builtins.set('height', () => renderer.getHeight());
   
   // Angle conversion
   builtins.set('deg', (radians: RageValue) => Number(radians) * (180 / Math.PI));
@@ -599,6 +610,15 @@ export function createBuiltins(
   // buffer_time(action) - returns remaining buffer time in seconds
   builtins.set('buffer_time', (action: RageValue) => {
     return inputManager.getBufferTime(String(action));
+  });
+
+  // ============ SCENE MANAGEMENT ============
+  
+  // load_scene(path) - loads a new rage script, resetting the current runtime
+  // The path is relative to the game's asset directory
+  builtins.set('load_scene', (path: RageValue) => {
+    sceneLoader(String(path));
+    return null;
   });
 
   return builtins;

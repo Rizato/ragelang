@@ -122,6 +122,10 @@ export class Interpreter {
   private lastTime: number = 0;
   private running: boolean = false;
   private frameCount: number = 0;
+  
+  // Scene loading support
+  private pendingScene: string | null = null;
+  private onSceneChange: ((path: string) => void) | null = null;
 
   constructor(renderer: CanvasRenderer, inputManager?: InputManager) {
     this.globalEnv = new Environment();
@@ -136,12 +140,72 @@ export class Interpreter {
       this.inputManager.setCanvas(ctx.canvas);
     }
     
-    this.builtins = createBuiltins(renderer, undefined, this.inputManager, () => this.frameCount);
+    this.builtins = createBuiltins(
+      renderer, 
+      undefined, 
+      this.inputManager, 
+      () => this.frameCount,
+      (path: string) => this.requestSceneChange(path)
+    );
 
     // Add builtins to global environment
     for (const [name, fn] of this.builtins) {
       this.globalEnv.define(name, fn);
     }
+  }
+  
+  /**
+   * Set callback for scene changes
+   */
+  setOnSceneChange(callback: (path: string) => void): void {
+    this.onSceneChange = callback;
+  }
+  
+  /**
+   * Request a scene change (called by load_scene builtin)
+   */
+  private requestSceneChange(path: string): void {
+    this.pendingScene = path;
+  }
+  
+  /**
+   * Check if a scene change is pending and get the path
+   */
+  getPendingScene(): string | null {
+    return this.pendingScene;
+  }
+  
+  /**
+   * Clear pending scene (call after handling the scene change)
+   */
+  clearPendingScene(): void {
+    this.pendingScene = null;
+  }
+  
+  /**
+   * Reset the interpreter to initial state (for scene changes)
+   */
+  reset(): void {
+    // Stop any running game loop
+    this.stopGameLoop();
+    
+    // Reset environment
+    this.globalEnv = new Environment();
+    this.currentEnv = this.globalEnv;
+    
+    // Re-add builtins to fresh environment
+    for (const [name, fn] of this.builtins) {
+      this.globalEnv.define(name, fn);
+    }
+    
+    // Clear blocks
+    this.drawBlock = null;
+    this.updateBlock = null;
+    
+    // Reset game state
+    this.frameCount = 0;
+    this.lastTime = 0;
+    this.pendingScene = null;
   }
 
   /**
@@ -212,6 +276,14 @@ export class Interpreter {
         if (!(e instanceof ReturnException)) throw e;
       }
       this.currentEnv = prevEnv;
+    }
+
+    // Check for pending scene change after update/draw
+    if (this.pendingScene !== null && this.onSceneChange) {
+      const scenePath = this.pendingScene;
+      this.pendingScene = null;
+      this.onSceneChange(scenePath);
+      return; // Stop current game loop, new scene will start its own
     }
 
     this.animationFrameId = requestAnimationFrame(this.gameLoop);
@@ -512,6 +584,32 @@ export class Interpreter {
   }
 
   private evaluateBinary(expr: BinaryExpression): RageValue {
+    // Handle short-circuit evaluation for logical operators FIRST
+    // These must not evaluate the right operand unless necessary
+    switch (expr.operator) {
+      case 'and':
+      case '&&': {
+        const left = this.evaluate(expr.left);
+        // Short-circuit: if left is falsy, return left without evaluating right
+        if (!this.isTruthy(left)) {
+          return left;
+        }
+        // Left is truthy, evaluate and return right
+        return this.evaluate(expr.right);
+      }
+      case 'or':
+      case '||': {
+        const left = this.evaluate(expr.left);
+        // Short-circuit: if left is truthy, return left without evaluating right
+        if (this.isTruthy(left)) {
+          return left;
+        }
+        // Left is falsy, evaluate and return right
+        return this.evaluate(expr.right);
+      }
+    }
+
+    // For all other operators, evaluate both operands
     const left = this.evaluate(expr.left);
     const right = this.evaluate(expr.right);
 
@@ -546,16 +644,6 @@ export class Interpreter {
         return Number(left) > Number(right);
       case '>=':
         return Number(left) >= Number(right);
-      
-      // Logical (short-circuit for keyword versions)
-      case 'and':
-        return this.isTruthy(left) ? right : left;
-      case 'or':
-        return this.isTruthy(left) ? left : right;
-      case '&&':
-        return this.isTruthy(left) ? right : left;
-      case '||':
-        return this.isTruthy(left) ? left : right;
       
       // Bitwise
       case '&':
@@ -785,16 +873,15 @@ export class Interpreter {
     const object = this.evaluate(expr.object);
     const property = expr.property.name;
 
+    if (object === null) {
+      throw new Error('Cannot access property on null');
+    }
+
     if (isPrototype(object)) {
       return object[property] ?? null;
     }
 
-    // Handle array length property
-    if (Array.isArray(object) && property === 'length') {
-      return object.length;
-    }
-
-    throw new Error('Can only access properties on prototypes or arrays');
+    throw new Error('Can only access properties on prototypes');
   }
 
   private evaluateIndex(expr: IndexExpression): RageValue {
@@ -1000,20 +1087,4 @@ export class Interpreter {
     return this.currentEnv;
   }
 
-  /**
-   * Reset the interpreter state
-   */
-  reset(): void {
-    this.stopGameLoop();
-    this.globalEnv = new Environment();
-    this.currentEnv = this.globalEnv;
-    this.drawBlock = null;
-    this.updateBlock = null;
-    this.frameCount = 0;
-
-    // Re-add builtins
-    for (const [name, fn] of this.builtins) {
-      this.globalEnv.define(name, fn);
-    }
-  }
 }
