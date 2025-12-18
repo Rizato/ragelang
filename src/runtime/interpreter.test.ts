@@ -2140,5 +2140,177 @@ has_grape = not_found != null
     expect(env.get('has_banana')).toBe(true);
     expect(env.get('has_grape')).toBe(false);
   });
+
+  // ============ SHORT-CIRCUIT EVALUATION ============
+
+  it('should short-circuit && when left is false', () => {
+    const interpreter = runProgram(`
+side_effect = false
+
+fun set_side_effect() {
+  side_effect = true
+  return true
+}
+
+// Left is false, so right should NOT be evaluated
+result = false && set_side_effect()
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(false);
+    expect(env.get('side_effect')).toBe(false); // Should NOT have been called
+  });
+
+  it('should evaluate right side of && when left is true', () => {
+    const interpreter = runProgram(`
+side_effect = false
+
+fun set_side_effect() {
+  side_effect = true
+  return true
+}
+
+// Left is true, so right SHOULD be evaluated
+result = true && set_side_effect()
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+    expect(env.get('side_effect')).toBe(true); // Should have been called
+  });
+
+  it('should short-circuit || when left is true', () => {
+    const interpreter = runProgram(`
+side_effect = false
+
+fun set_side_effect() {
+  side_effect = true
+  return false
+}
+
+// Left is true, so right should NOT be evaluated
+result = true || set_side_effect()
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+    expect(env.get('side_effect')).toBe(false); // Should NOT have been called
+  });
+
+  it('should evaluate right side of || when left is false', () => {
+    const interpreter = runProgram(`
+side_effect = false
+
+fun set_side_effect() {
+  side_effect = true
+  return true
+}
+
+// Left is false, so right SHOULD be evaluated
+result = false || set_side_effect()
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+    expect(env.get('side_effect')).toBe(true); // Should have been called
+  });
+
+  it('should short-circuit and keyword when left is false', () => {
+    const interpreter = runProgram(`
+side_effect = false
+
+fun set_side_effect() {
+  side_effect = true
+  return true
+}
+
+// Left is false, so right should NOT be evaluated
+result = false and set_side_effect()
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(false);
+    expect(env.get('side_effect')).toBe(false);
+  });
+
+  it('should short-circuit or keyword when left is true', () => {
+    const interpreter = runProgram(`
+side_effect = false
+
+fun set_side_effect() {
+  side_effect = true
+  return false
+}
+
+// Left is true, so right should NOT be evaluated
+result = true or set_side_effect()
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+    expect(env.get('side_effect')).toBe(false);
+  });
+
+  it('should short-circuit with null checks', () => {
+    const interpreter = runProgram(`
+obj = null
+accessed = false
+
+fun access_property() {
+  accessed = true
+  return obj.value
+}
+
+// Should short-circuit and not try to access obj.value
+result = obj != null && access_property()
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(false);
+    expect(env.get('accessed')).toBe(false);
+  });
+
+  it('should use short-circuit for safe property access pattern', () => {
+    const interpreter = runProgram(`
+player = null
+can_jump = player != null && player.on_ground
+
+player2 = {on_ground: true}
+can_jump2 = player2 != null && player2.on_ground
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('can_jump')).toBe(false);
+    expect(env.get('can_jump2')).toBe(true);
+  });
+
+  it('should chain short-circuit operators', () => {
+    const interpreter = runProgram(`
+a = false
+b = true
+c = true
+call_count = 0
+
+fun check() {
+  call_count = call_count + 1
+  return true
+}
+
+// a is false, so b and check() should not be evaluated
+result = a && b && check()
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(false);
+    expect(env.get('call_count')).toBe(0);
+  });
+
+  it('should chain || with short-circuit', () => {
+    const interpreter = runProgram(`
+call_count = 0
+
+fun increment() {
+  call_count = call_count + 1
+  return true
+}
+
+// First true should stop evaluation
+result = true || increment() || increment()
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(true);
+    expect(env.get('call_count')).toBe(0);
+  });
 });
 

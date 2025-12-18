@@ -512,6 +512,32 @@ export class Interpreter {
   }
 
   private evaluateBinary(expr: BinaryExpression): RageValue {
+    // Handle short-circuit evaluation for logical operators FIRST
+    // These must not evaluate the right operand unless necessary
+    switch (expr.operator) {
+      case 'and':
+      case '&&': {
+        const left = this.evaluate(expr.left);
+        // Short-circuit: if left is falsy, return left without evaluating right
+        if (!this.isTruthy(left)) {
+          return left;
+        }
+        // Left is truthy, evaluate and return right
+        return this.evaluate(expr.right);
+      }
+      case 'or':
+      case '||': {
+        const left = this.evaluate(expr.left);
+        // Short-circuit: if left is truthy, return left without evaluating right
+        if (this.isTruthy(left)) {
+          return left;
+        }
+        // Left is falsy, evaluate and return right
+        return this.evaluate(expr.right);
+      }
+    }
+
+    // For all other operators, evaluate both operands
     const left = this.evaluate(expr.left);
     const right = this.evaluate(expr.right);
 
@@ -546,16 +572,6 @@ export class Interpreter {
         return Number(left) > Number(right);
       case '>=':
         return Number(left) >= Number(right);
-      
-      // Logical (short-circuit for keyword versions)
-      case 'and':
-        return this.isTruthy(left) ? right : left;
-      case 'or':
-        return this.isTruthy(left) ? left : right;
-      case '&&':
-        return this.isTruthy(left) ? right : left;
-      case '||':
-        return this.isTruthy(left) ? left : right;
       
       // Bitwise
       case '&':
@@ -786,7 +802,7 @@ export class Interpreter {
     const property = expr.property.name;
 
     if (object === null) {
-      throw new Error('Null object error');
+      throw new Error('Cannot access property on null');
     }
 
     if (isPrototype(object)) {
