@@ -789,12 +789,7 @@ export class Interpreter {
       return object[property] ?? null;
     }
 
-    // Handle array length property
-    if (Array.isArray(object) && property === 'length') {
-      return object.length;
-    }
-
-    throw new Error('Can only access properties on prototypes or arrays');
+    throw new Error('Can only access properties on prototypes');
   }
 
   private evaluateIndex(expr: IndexExpression): RageValue {
