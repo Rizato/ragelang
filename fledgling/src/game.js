@@ -2,16 +2,17 @@ import { Ragelang } from '../dist/index.js';
 
 let ragelang = null;
 let gameCode = '';
+let currentScenePath = 'assets/rage/menu.rage'; // Start with menu
 let isEditorOpen = false;
 
-// Load game code
-async function loadGameCode() {
+// Load rage code from a path
+async function loadRageCode(path) {
   try {
-    const response = await fetch('fledgling.rage');
-    gameCode = await response.text();
-    return gameCode;
+    const response = await fetch(path);
+    const code = await response.text();
+    return code;
   } catch (error) {
-    console.error('Failed to load game code:', error);
+    console.error(`Failed to load rage code from ${path}:`, error);
     return null;
   }
 }
@@ -45,6 +46,52 @@ function showConfirm(message, onConfirm) {
   noBtn.addEventListener('click', handleNo);
 }
 
+// Load and run a scene
+async function loadScene(path) {
+  const canvas = document.getElementById('game-canvas');
+  
+  // Stop current game if running
+  if (ragelang) {
+    ragelang.stop();
+    ragelang = null;
+  }
+  
+  currentScenePath = path;
+  
+  // Load scene code
+  const code = await loadRageCode(path);
+  if (!code) {
+    console.error(`Failed to load scene: ${path}`);
+    return;
+  }
+  
+  gameCode = code;
+
+  // Initialize Ragelang with scene change callback
+  ragelang = new Ragelang({
+    canvas: canvas,
+    width: canvas.width,
+    height: canvas.height,
+    onSceneChange: (newPath) => {
+      console.log(`Loading scene: ${newPath}`);
+      loadScene(newPath);
+    }
+  });
+
+  // Inject screen dimensions into game code
+  const modifiedCode = code.replace(
+    /screen_w = \d+/,
+    `screen_w = ${canvas.width}`
+  ).replace(
+    /screen_h = \d+/,
+    `screen_h = ${canvas.height}`
+  );
+
+  // Run the scene
+  ragelang.run(modifiedCode);
+  ragelang.start();
+}
+
 // Initialize and run game
 async function initGame() {
   const canvas = document.getElementById('game-canvas');
@@ -59,64 +106,16 @@ async function initGame() {
   window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
 
-  // Load game code
-  const code = await loadGameCode();
-  if (!code) {
-    alert('Failed to load game code. Please ensure fledgling.rage exists.');
-    return;
-  }
-
-  // Initialize Ragelang
-  ragelang = new Ragelang({
-    canvas: canvas,
-    width: canvas.width,
-    height: canvas.height
-  });
-
-  // Inject screen dimensions into game code
-  const modifiedCode = code.replace(
-    /screen_w = \d+/,
-    `screen_w = ${canvas.width}`
-  ).replace(
-    /screen_h = \d+/,
-    `screen_h = ${canvas.height}`
-  );
-
-  // Run the game
-  ragelang.run(modifiedCode);
-  ragelang.start();
+  // Load the initial scene (menu)
+  await loadScene(currentScenePath);
 }
 
-// Restart game
+// Restart game (reloads current scene)
 function restartGame() {
-  if (ragelang) {
-    ragelang.stop();
-    ragelang = null;
-  }
-
   isEditorOpen = false;
   document.getElementById('code-editor-overlay').classList.remove('active');
-
-  const canvas = document.getElementById('game-canvas');
   
-  // Initialize Ragelang again
-  ragelang = new Ragelang({
-    canvas: canvas,
-    width: canvas.width,
-    height: canvas.height
-  });
-
-  // Inject screen dimensions
-  const modifiedCode = gameCode.replace(
-    /screen_w = \d+/,
-    `screen_w = ${canvas.width}`
-  ).replace(
-    /screen_h = \d+/,
-    `screen_h = ${canvas.height}`
-  );
-
-  ragelang.run(modifiedCode);
-  ragelang.start();
+  loadScene(currentScenePath);
 }
 
 // Setup editor
