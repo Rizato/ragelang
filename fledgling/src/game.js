@@ -1,4 +1,4 @@
-import { Ragelang } from 'assets/js/ragelange.bundle.js';
+const { Ragelang } = window.RagelangLib;
 
 let ragelang = null;
 let gameCode = '';
@@ -47,6 +47,8 @@ function showConfirm(message, onConfirm) {
 }
 
 // Load and run a scene
+// This function is called both on initial load and when load_scene() is called from Ragelang code
+// The preprocessor (FallingProcessor) runs automatically in ragelang.run()
 async function loadScene(path) {
   const canvas = document.getElementById('game-canvas');
   
@@ -88,6 +90,8 @@ async function loadScene(path) {
   );
 
   // Run the scene
+  // Note: ragelang.run() automatically runs the FallingProcessor preprocessor
+  // before tokenizing, parsing, and interpreting the code
   ragelang.run(modifiedCode);
   ragelang.start();
 }
