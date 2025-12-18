@@ -785,6 +785,10 @@ export class Interpreter {
     const object = this.evaluate(expr.object);
     const property = expr.property.name;
 
+    if (object === null) {
+      throw new Error('Null object error');
+    }
+
     if (isPrototype(object)) {
       return object[property] ?? null;
     }
