@@ -1,4 +1,4 @@
-import { Ragelang } from '../dist/ragelange.bundle.js';
+import { Ragelang } from 'assets/js/ragelange.bundle.js';
 
 let ragelang = null;
 let gameCode = '';

@@ -140,3 +140,6 @@ vite.config.ts.timestamp-*
 
 # ignore beads
 .beads/
+
+# ignore bundle
+ragelang.bundle.js

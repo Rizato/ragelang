@@ -15,9 +15,10 @@
     "lint": "eslint src --ext .ts",
     "clean": "rm -rf dist",
     "demo": "npm run build && npx serve@latest -l 8080",
-    "fledgling:dev": "npm run build && npx serve@latest fledgling -l 8080",
-    "fledgling:build": "npm run build:all",
-    "fledgling:serve": "npx serve@latest fledgling -l 8080"
+    "fledgling:dev": "npm run build && npm run bundle && cp dist/ragelang.bundle.js fledgling/assets/js/ && npx serve@latest fledgling -l 8080",
+    "fledgling:build": "npm run build:all && cp dist/ragelang.bundle.js fledgling/assets/js/",
+    "fledgling:serve": "npx serve@latest fledgling -l 8080",
+    "fledgling:copy-bundle": "cp dist/ragelang.bundle.js fledgling/assets/js/"
   },
   "keywords": [
     "ragelang",
