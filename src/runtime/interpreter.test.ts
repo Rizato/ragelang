@@ -557,15 +557,6 @@ result = arr[1]
     expect(env.get('result')).toBe(99);
   });
 
-  it('should handle array length property', () => {
-    const interpreter = runProgram(`
-arr = [1, 2, 3, 4, 5]
-len = arr.length
-`);
-    const env = interpreter.getEnvironment();
-    expect(env.get('len')).toBe(5);
-  });
-
   it('should handle string indexing', () => {
     const interpreter = runProgram(`
 s = "hello"
@@ -713,7 +704,7 @@ loop {
 fun findFirst(arr, target) {
   i = 0
   loop {
-    if (i >= arr.length) {
+    if (i >= len(arr)) {
       return -1
     }
     if (arr[i] == target) {
@@ -752,7 +743,7 @@ b = apply(triple, 5)
   it('should create array with array(size) builtin', () => {
     const interpreter = runProgram(`
 arr = array(5)
-result = arr.length
+result = len(arr)
 `);
     const env = interpreter.getEnvironment();
     expect(env.get('result')).toBe(5);

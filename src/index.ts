@@ -25,6 +25,7 @@ export interface RagelangOptions {
   canvas?: HTMLCanvasElement | null;
   width?: number;
   height?: number;
+  onSceneChange?: (path: string) => void;
 }
 
 /**
@@ -40,6 +41,18 @@ export class Ragelang {
       height: options.height ?? 600
     });
     this.interpreter = new Interpreter(this.renderer);
+    
+    // Set scene change callback if provided
+    if (options.onSceneChange) {
+      this.interpreter.setOnSceneChange(options.onSceneChange);
+    }
+  }
+  
+  /**
+   * Set callback for when load_scene() is called
+   */
+  setOnSceneChange(callback: (path: string) => void): void {
+    this.interpreter.setOnSceneChange(callback);
   }
 
   /**

@@ -122,6 +122,10 @@ export class Interpreter {
   private lastTime: number = 0;
   private running: boolean = false;
   private frameCount: number = 0;
+  
+  // Scene loading support
+  private pendingScene: string | null = null;
+  private onSceneChange: ((path: string) => void) | null = null;
 
   constructor(renderer: CanvasRenderer, inputManager?: InputManager) {
     this.globalEnv = new Environment();
@@ -136,12 +140,46 @@ export class Interpreter {
       this.inputManager.setCanvas(ctx.canvas);
     }
     
-    this.builtins = createBuiltins(renderer, undefined, this.inputManager, () => this.frameCount);
+    this.builtins = createBuiltins(
+      renderer, 
+      undefined, 
+      this.inputManager, 
+      () => this.frameCount,
+      (path: string) => this.requestSceneChange(path)
+    );
 
     // Add builtins to global environment
     for (const [name, fn] of this.builtins) {
       this.globalEnv.define(name, fn);
     }
+  }
+  
+  /**
+   * Set callback for scene changes
+   */
+  setOnSceneChange(callback: (path: string) => void): void {
+    this.onSceneChange = callback;
+  }
+  
+  /**
+   * Request a scene change (called by load_scene builtin)
+   */
+  private requestSceneChange(path: string): void {
+    this.pendingScene = path;
+  }
+  
+  /**
+   * Check if a scene change is pending and get the path
+   */
+  getPendingScene(): string | null {
+    return this.pendingScene;
+  }
+  
+  /**
+   * Clear pending scene (call after handling the scene change)
+   */
+  clearPendingScene(): void {
+    this.pendingScene = null;
   }
 
   /**
@@ -212,6 +250,14 @@ export class Interpreter {
         if (!(e instanceof ReturnException)) throw e;
       }
       this.currentEnv = prevEnv;
+    }
+
+    // Check for pending scene change after update/draw
+    if (this.pendingScene !== null && this.onSceneChange) {
+      const scenePath = this.pendingScene;
+      this.pendingScene = null;
+      this.onSceneChange(scenePath);
+      return; // Stop current game loop, new scene will start its own
     }
 
     this.animationFrameId = requestAnimationFrame(this.gameLoop);
