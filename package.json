@@ -14,7 +14,10 @@
     "test:run": "vitest run",
     "lint": "eslint src --ext .ts",
     "clean": "rm -rf dist",
-    "demo": "npm run build && npx serve@latest -l 8080"
+    "demo": "npm run build && npx serve@latest -l 8080",
+    "fledgling:dev": "npm run build && npx serve@latest fledgling -l 8080",
+    "fledgling:build": "npm run build:all",
+    "fledgling:serve": "npx serve@latest fledgling -l 8080"
   },
   "keywords": [
     "ragelang",

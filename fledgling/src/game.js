@@ -1,4 +1,4 @@
-import { Ragelang } from '../dist/index.js';
+import { Ragelang } from '../dist/ragelange.bundle.js';
 
 let ragelang = null;
 let gameCode = '';
