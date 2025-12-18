@@ -13,22 +13,32 @@ const ACTION_KEYS: Record<string, string[]> = {
   'right': ['ArrowRight', 'KeyD'],
   'up': ['ArrowUp', 'KeyW'],
   'down': ['ArrowDown', 'KeyS'],
-  'jump': ['Space', 'KeyZ'],
-  'action': ['Enter', 'KeyX'],
+  'jump': ['Space'],
   'start': ['Escape'],
-  'select': ['Tab'],
-  'a': ['Space', 'KeyZ'],
-  'b': ['Enter', 'KeyX'],
+  'interact': ['KeyE'],
 };
 
 // Gamepad button indices (standard mapping)
 const GAMEPAD_ACTIONS: Record<string, number[]> = {
-  'jump': [0],     // A/Cross
-  'action': [1],   // B/Circle
-  'a': [0],
-  'b': [1],
-  'start': [9],
-  'select': [8],
+  'a': [0],     // A/Cross
+  'jump': [0],
+  'b': [1],   // B/Circle
+  'x': [2], // X/Square
+  'interact': [2],
+  'y': [3], // Y/Triangle
+  'start': [9], // Start/Pause
+  'select': [8], // Select/Menu
+  'right_shoulder': [5], // Right Shoulder/R1
+  'left_trigger': [6], // Left Trigger/L2
+  'right_trigger': [7], // Right Trigger/R2
+  'left_stick_up': [10], // Left Stick Up/D-Pad Up
+  'left_stick_down': [11], // Left Stick Down/D-Pad Down
+  'left_stick_left': [12], // Left Stick Left/D-Pad Left
+  'left_stick_right': [13], // Left Stick Right/D-Pad Right
+  'right_stick_up': [14], // Right Stick Up/D-Pad Up
+  'right_stick_down': [15], // Right Stick Down/D-Pad Down
+  'right_stick_left': [16], // Right Stick Left/D-Pad Left
+  'right_stick_right': [17], // Right Stick Right/D-Pad Right
 };
 
 // Gamepad axes for directions
@@ -159,7 +169,10 @@ export class InputManager {
    * Check if an action was just pressed this frame
    */
   pressed(action: string): boolean {
-    // Check keyboard
+    // Check for exact match before translated keys like jump, interact, etc.
+    if (this.keysPressed.has(action.toLowerCase())) return true;
+
+    // Check keyboard for translated keys like jump, interact, etc.
     const keys = ACTION_KEYS[action.toLowerCase()];
     if (keys) {
       for (const key of keys) {
