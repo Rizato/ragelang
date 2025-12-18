@@ -181,6 +181,32 @@ export class Interpreter {
   clearPendingScene(): void {
     this.pendingScene = null;
   }
+  
+  /**
+   * Reset the interpreter to initial state (for scene changes)
+   */
+  reset(): void {
+    // Stop any running game loop
+    this.stopGameLoop();
+    
+    // Reset environment
+    this.globalEnv = new Environment();
+    this.currentEnv = this.globalEnv;
+    
+    // Re-add builtins to fresh environment
+    for (const [name, fn] of this.builtins) {
+      this.globalEnv.define(name, fn);
+    }
+    
+    // Clear blocks
+    this.drawBlock = null;
+    this.updateBlock = null;
+    
+    // Reset game state
+    this.frameCount = 0;
+    this.lastTime = 0;
+    this.pendingScene = null;
+  }
 
   /**
    * Run a Ragelang program
@@ -1061,20 +1087,4 @@ export class Interpreter {
     return this.currentEnv;
   }
 
-  /**
-   * Reset the interpreter state
-   */
-  reset(): void {
-    this.stopGameLoop();
-    this.globalEnv = new Environment();
-    this.currentEnv = this.globalEnv;
-    this.drawBlock = null;
-    this.updateBlock = null;
-    this.frameCount = 0;
-
-    // Re-add builtins
-    for (const [name, fn] of this.builtins) {
-      this.globalEnv.define(name, fn);
-    }
-  }
 }

@@ -46,80 +46,83 @@ function showConfirm(message, onConfirm) {
   noBtn.addEventListener('click', handleNo);
 }
 
-// Load and run a scene
-// This function is called both on initial load and when load_scene() is called from Ragelang code
-// The preprocessor (FallingProcessor) runs automatically in ragelang.run()
-async function loadScene(path) {
-  const canvas = document.getElementById('game-canvas');
-  
-  // Stop current game if running
-  if (ragelang) {
-    ragelang.stop();
-    ragelang = null;
-  }
-  
-  currentScenePath = path;
-  
-  // Load scene code
-  const code = await loadRageCode(path);
-  if (!code) {
-    console.error(`Failed to load scene: ${path}`);
-    return;
-  }
-  
-  gameCode = code;
-
-  // Initialize Ragelang with scene change callback
-  ragelang = new Ragelang({
-    canvas: canvas,
-    width: canvas.width,
-    height: canvas.height,
-    onSceneChange: (newPath) => {
-      console.log(`Loading scene: ${newPath}`);
-      loadScene(newPath);
-    }
-  });
-
-  // Inject screen dimensions into game code
-  const modifiedCode = code.replace(
-    /screen_w = \d+/,
-    `screen_w = ${canvas.width}`
-  ).replace(
-    /screen_h = \d+/,
-    `screen_h = ${canvas.height}`
-  );
-
-  // Run the scene
-  // Note: ragelang.run() automatically runs the FallingProcessor preprocessor
-  // before tokenizing, parsing, and interpreting the code
-  ragelang.run(modifiedCode);
-  ragelang.start();
-}
-
 // Initialize and run game
 async function initGame() {
   const canvas = document.getElementById('game-canvas');
-  const container = document.getElementById('game-container');
 
   // Set canvas to full screen
   function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+    
+    // Reinitialize ragelang if canvas size changes and we have a running game
+    if (ragelang && ragelang.isGameRunning()) {
+      loadInitialScene();
+    }
   }
 
   window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
 
-  // Load the initial scene (menu)
-  await loadScene(currentScenePath);
+  // Load the initial scene
+  await loadInitialScene();
 }
 
-// Restart game (reloads current scene)
+// Load the initial scene (menu)
+async function loadInitialScene() {
+  const canvas = document.getElementById('game-canvas');
+  
+  // Stop and clean up existing instance
+  if (ragelang) {
+    ragelang.stop();
+  }
+  
+  // Load initial scene code
+  const code = await loadRageCode(currentScenePath);
+  if (!code) {
+    console.error(`Failed to load initial scene: ${currentScenePath}`);
+    return;
+  }
+  
+  gameCode = code;
+
+  // Initialize Ragelang - scene loading is now handled internally
+  // Just provide basePath for resolving relative paths in load_scene()
+  ragelang = new Ragelang({
+    canvas: canvas,
+    width: canvas.width,
+    height: canvas.height,
+    basePath: '' // Paths are relative to index.html location
+  });
+
+  // Run the scene
+  // Note: ragelang.run() automatically runs the FallingProcessor preprocessor
+  // before tokenizing, parsing, and interpreting the code
+  ragelang.run(code);
+  ragelang.start();
+}
+
+// Restart game (reloads current scene from editor)
 function restartGame() {
   isEditorOpen = false;
   document.getElementById('code-editor-overlay').classList.remove('active');
   
-  loadScene(currentScenePath);
+  const canvas = document.getElementById('game-canvas');
+  
+  if (ragelang) {
+    ragelang.stop();
+  }
+  
+  // Reinitialize with edited code
+  ragelang = new Ragelang({
+    canvas: canvas,
+    width: canvas.width,
+    height: canvas.height,
+    basePath: ''
+  });
+  
+  ragelang.run(gameCode);
+  ragelang.start();
 }
 
 // Setup editor

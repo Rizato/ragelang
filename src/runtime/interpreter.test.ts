@@ -1216,14 +1216,9 @@ in_bounds_y = 300 < height()
 
   // ============ LOAD_SCENE BUILTIN ============
 
-  it('should have load_scene() function', () => {
+  it('should have load_scene() function that sets pending scene', () => {
     const renderer = new CanvasRenderer(null, { width: 800, height: 600 });
     const interpreter = new Interpreter(renderer);
-    
-    let loadedPath: string | null = null;
-    interpreter.setOnSceneChange((path) => {
-      loadedPath = path;
-    });
     
     const lexer = new Lexer('load_scene("assets/rage/menu.rage")');
     const tokens = lexer.tokenize();
@@ -1231,7 +1226,7 @@ in_bounds_y = 300 < height()
     const ast = parser.parse();
     interpreter.run(ast);
     
-    // Scene change is triggered but won't fire callback until game loop checks
+    // load_scene sets the pending scene which is handled by the Ragelang class
     expect(interpreter.getPendingScene()).toBe('assets/rage/menu.rage');
   });
 

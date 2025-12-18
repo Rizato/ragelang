@@ -25,7 +25,8 @@ export interface RagelangOptions {
   canvas?: HTMLCanvasElement | null;
   width?: number;
   height?: number;
-  onSceneChange?: (path: string) => void;
+  /** Base path for resolving scene paths in load_scene() */
+  basePath?: string;
 }
 
 /**
@@ -34,25 +35,67 @@ export interface RagelangOptions {
 export class Ragelang {
   private interpreter: Interpreter;
   private renderer: CanvasRenderer;
+  private canvas: HTMLCanvasElement | null;
+  private basePath: string;
+  private isRunning: boolean = false;
 
   constructor(options: RagelangOptions = {}) {
-    this.renderer = new CanvasRenderer(options.canvas ?? null, {
+    this.canvas = options.canvas ?? null;
+    this.basePath = options.basePath ?? '';
+    this.renderer = new CanvasRenderer(this.canvas, {
       width: options.width ?? 800,
       height: options.height ?? 600
     });
     this.interpreter = new Interpreter(this.renderer);
     
-    // Set scene change callback if provided
-    if (options.onSceneChange) {
-      this.interpreter.setOnSceneChange(options.onSceneChange);
+    // Set up internal scene change handling
+    this.interpreter.setOnSceneChange((path: string) => {
+      this.handleSceneChange(path);
+    });
+  }
+  
+  /**
+   * Internal handler for scene changes triggered by load_scene()
+   */
+  private async handleSceneChange(path: string): Promise<void> {
+    // Resolve path relative to basePath
+    const fullPath = this.resolvePath(path);
+    
+    try {
+      // Fetch the new scene code
+      const response = await fetch(fullPath);
+      if (!response.ok) {
+        throw new Error(`Failed to load scene: ${response.status} ${response.statusText}`);
+      }
+      const code = await response.text();
+      
+      // Stop current game
+      this.stop();
+      
+      // Reset the interpreter for the new scene
+      this.interpreter.reset();
+      
+      // Run the new scene
+      this.run(code);
+      this.start();
+    } catch (error) {
+      console.error(`Failed to load scene "${path}":`, error);
     }
   }
   
   /**
-   * Set callback for when load_scene() is called
+   * Resolve a path relative to basePath
    */
-  setOnSceneChange(callback: (path: string) => void): void {
-    this.interpreter.setOnSceneChange(callback);
+  private resolvePath(path: string): string {
+    // If path is absolute (starts with / or http), use as-is
+    if (path.startsWith('/') || path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    // Otherwise resolve relative to basePath
+    if (this.basePath && !this.basePath.endsWith('/')) {
+      return `${this.basePath}/${path}`;
+    }
+    return `${this.basePath}${path}`;
   }
 
   /**
@@ -87,6 +130,7 @@ export class Ragelang {
    * Start the game loop
    */
   start(): void {
+    this.isRunning = true;
     this.interpreter.startGameLoop();
   }
 
@@ -94,6 +138,7 @@ export class Ragelang {
    * Stop the game loop
    */
   stop(): void {
+    this.isRunning = false;
     this.interpreter.stopGameLoop();
   }
 
@@ -102,6 +147,13 @@ export class Ragelang {
    */
   getRenderContext(): RenderContext | null {
     return this.renderer.getContext();
+  }
+  
+  /**
+   * Check if game loop is running
+   */
+  isGameRunning(): boolean {
+    return this.isRunning;
   }
 }
 
