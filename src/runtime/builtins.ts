@@ -204,6 +204,13 @@ export function createBuiltins(
   // frames() - returns number of frames that have been rendered
   builtins.set('frames', () => frameGetter());
   
+  // Canvas dimensions
+  // width() - returns canvas width in pixels
+  builtins.set('width', () => renderer.getWidth());
+  
+  // height() - returns canvas height in pixels
+  builtins.set('height', () => renderer.getHeight());
+  
   // Angle conversion
   builtins.set('deg', (radians: RageValue) => Number(radians) * (180 / Math.PI));
   builtins.set('rad', (degrees: RageValue) => Number(degrees) * (Math.PI / 180));

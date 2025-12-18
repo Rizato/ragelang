@@ -1154,6 +1154,157 @@ doubled = f * 2
     expect(env.get('doubled')).toBe(0);
   });
 
+  // ============ WIDTH AND HEIGHT BUILTINS ============
+
+  it('should have width() function that returns canvas width', () => {
+    const interpreter = runProgram(`
+w = width()
+`);
+    const env = interpreter.getEnvironment();
+    // Default canvas width is 800
+    expect(env.get('w')).toBe(800);
+  });
+
+  it('should have height() function that returns canvas height', () => {
+    const interpreter = runProgram(`
+h = height()
+`);
+    const env = interpreter.getEnvironment();
+    // Default canvas height is 600
+    expect(env.get('h')).toBe(600);
+  });
+
+  it('should use width() and height() in expressions', () => {
+    const interpreter = runProgram(`
+w = width()
+h = height()
+area = w * h
+half_w = w / 2
+half_h = h / 2
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('area')).toBe(800 * 600);
+    expect(env.get('half_w')).toBe(400);
+    expect(env.get('half_h')).toBe(300);
+  });
+
+  it('should use width() and height() for centering', () => {
+    const interpreter = runProgram(`
+center_x = width() / 2
+center_y = height() / 2
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('center_x')).toBe(400);
+    expect(env.get('center_y')).toBe(300);
+  });
+
+  it('should use width() and height() for boundary checks', () => {
+    const interpreter = runProgram(`
+x = 900
+y = 700
+out_of_bounds_x = x > width()
+out_of_bounds_y = y > height()
+in_bounds_x = 400 < width()
+in_bounds_y = 300 < height()
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('out_of_bounds_x')).toBe(true);
+    expect(env.get('out_of_bounds_y')).toBe(true);
+    expect(env.get('in_bounds_x')).toBe(true);
+    expect(env.get('in_bounds_y')).toBe(true);
+  });
+
+  // ============ LOAD_SCENE BUILTIN ============
+
+  it('should have load_scene() function', () => {
+    const renderer = new CanvasRenderer(null, { width: 800, height: 600 });
+    const interpreter = new Interpreter(renderer);
+    
+    let loadedPath: string | null = null;
+    interpreter.setOnSceneChange((path) => {
+      loadedPath = path;
+    });
+    
+    const lexer = new Lexer('load_scene("assets/rage/menu.rage")');
+    const tokens = lexer.tokenize();
+    const parser = new Parser(tokens);
+    const ast = parser.parse();
+    interpreter.run(ast);
+    
+    // Scene change is triggered but won't fire callback until game loop checks
+    expect(interpreter.getPendingScene()).toBe('assets/rage/menu.rage');
+  });
+
+  it('should set pending scene with load_scene()', () => {
+    const renderer = new CanvasRenderer(null, { width: 800, height: 600 });
+    const interpreter = new Interpreter(renderer);
+    
+    const lexer = new Lexer('load_scene("level2.rage")');
+    const tokens = lexer.tokenize();
+    const parser = new Parser(tokens);
+    const ast = parser.parse();
+    interpreter.run(ast);
+    
+    expect(interpreter.getPendingScene()).toBe('level2.rage');
+  });
+
+  it('should clear pending scene', () => {
+    const renderer = new CanvasRenderer(null, { width: 800, height: 600 });
+    const interpreter = new Interpreter(renderer);
+    
+    const lexer = new Lexer('load_scene("test.rage")');
+    const tokens = lexer.tokenize();
+    const parser = new Parser(tokens);
+    const ast = parser.parse();
+    interpreter.run(ast);
+    
+    expect(interpreter.getPendingScene()).toBe('test.rage');
+    interpreter.clearPendingScene();
+    expect(interpreter.getPendingScene()).toBe(null);
+  });
+
+  it('should return null from load_scene()', () => {
+    const interpreter = runProgram(`
+result = load_scene("some/path.rage")
+`);
+    const env = interpreter.getEnvironment();
+    expect(env.get('result')).toBe(null);
+  });
+
+  it('should handle load_scene() with variable path', () => {
+    const renderer = new CanvasRenderer(null, { width: 800, height: 600 });
+    const interpreter = new Interpreter(renderer);
+    
+    const lexer = new Lexer(`
+scene_path = "assets/scenes/boss.rage"
+load_scene(scene_path)
+`);
+    const tokens = lexer.tokenize();
+    const parser = new Parser(tokens);
+    const ast = parser.parse();
+    interpreter.run(ast);
+    
+    expect(interpreter.getPendingScene()).toBe('assets/scenes/boss.rage');
+  });
+
+  it('should handle load_scene() with concatenated path', () => {
+    const renderer = new CanvasRenderer(null, { width: 800, height: 600 });
+    const interpreter = new Interpreter(renderer);
+    
+    const lexer = new Lexer(`
+base = "assets/rage/"
+name = "menu"
+ext = ".rage"
+load_scene(base + name + ext)
+`);
+    const tokens = lexer.tokenize();
+    const parser = new Parser(tokens);
+    const ast = parser.parse();
+    interpreter.run(ast);
+    
+    expect(interpreter.getPendingScene()).toBe('assets/rage/menu.rage');
+  });
+
   // Python-like array builtin tests
   it('should sort array in place', () => {
     const interpreter = runProgram(`
