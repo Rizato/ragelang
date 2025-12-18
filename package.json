@@ -7,7 +7,8 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "bundle": "esbuild src/index.ts --bundle --format=iife --global-name=RagelangLib --outfile=dist/ragelang.bundle.js --minify",
+    "bundle": "esbuild src/index.ts --bundle --format=iife --global-name=RagelangLib --outfile=dist/ragelang.bundle.js",
+    "bundle:minify": "esbuild src/index.ts --bundle --format=iife --global-name=RagelangLib --outfile=dist/ragelang.bundle.min.js --minify",
     "build:all": "npm run build && npm run bundle",
     "dev": "tsc --watch",
     "test": "vitest",
@@ -42,5 +43,5 @@
     "dist/",
     "README.md"
   ],
-  "browser": "dist/ragelang.bundle.js"
+  "browser": "dist/ragelang.bundle.min.js"
 }
