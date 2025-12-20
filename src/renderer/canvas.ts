@@ -37,7 +37,7 @@ export class CanvasRenderer {
     if (canvas) {
       canvas.width = this.width;
       canvas.height = this.height;
-      this.ctx = canvas.getContext('2d');
+      this.ctx = canvas.getContext("2d");
     }
   }
 
@@ -58,9 +58,9 @@ export class CanvasRenderer {
   /**
    * Clear the canvas
    */
-  clear(color: string = '#000000'): void {
+  clear(color: string = "#000000"): void {
     if (!this.ctx) return;
-    
+
     this.ctx.fillStyle = color;
     this.ctx.fillRect(0, 0, this.width, this.height);
   }
@@ -69,7 +69,14 @@ export class CanvasRenderer {
    * Draw text on the canvas
    * text(text, x, y, size, color, alpha)
    */
-  text(text: string, x: number, y: number, size: number = 16, color: string = '#ffffff', alpha: number = 1): void {
+  text(
+    text: string,
+    x: number,
+    y: number,
+    size: number = 16,
+    color: string = "#ffffff",
+    alpha: number = 1
+  ): void {
     if (!this.ctx) return;
 
     const prevAlpha = this.ctx.globalAlpha;
@@ -83,10 +90,10 @@ export class CanvasRenderer {
   /**
    * Draw a sprite on the canvas
    * sprite(path, x, y, width, height, sx, sy, sw, sh, color, alpha)
-   * 
+   *
    * @param path - Image path (null for colored rectangle)
    * @param x - Destination X on canvas
-   * @param y - Destination Y on canvas  
+   * @param y - Destination Y on canvas
    * @param width - Destination width on canvas
    * @param height - Destination height on canvas
    * @param sx - Source X in sprite sheet (optional, for sprite sheets)
@@ -95,7 +102,7 @@ export class CanvasRenderer {
    * @param sh - Source height in sprite sheet (optional)
    * @param color - Color for placeholder or tint (optional)
    * @param alpha - Transparency 0-1 (optional)
-   * 
+   *
    * If path is null/empty, draws a colored rectangle.
    * If sx/sy/sw/sh are provided, extracts that region from the sprite sheet.
    */
@@ -109,7 +116,7 @@ export class CanvasRenderer {
     sy: number | null = null,
     sw: number | null = null,
     sh: number | null = null,
-    color: string = '#ffffff',
+    color: string = "#ffffff",
     alpha: number = 1
   ): void {
     if (!this.ctx) return;
@@ -127,13 +134,13 @@ export class CanvasRenderer {
 
     // Check if sprite is already loaded
     let spriteData = this.sprites.get(path);
-    
+
     if (!spriteData) {
       // Load the sprite asynchronously
       const img = new Image();
       spriteData = { image: img, loaded: false };
       this.sprites.set(path, spriteData);
-      
+
       img.onload = () => {
         spriteData!.loaded = true;
       };
@@ -150,8 +157,14 @@ export class CanvasRenderer {
         // Draw from sprite sheet region
         this.ctx.drawImage(
           spriteData.image,
-          sx, sy, sw, sh,  // Source rectangle
-          x, y, width, height  // Destination rectangle
+          sx,
+          sy,
+          sw,
+          sh, // Source rectangle
+          x,
+          y,
+          width,
+          height // Destination rectangle
         );
       } else {
         // Draw the entire image, optionally scaled
@@ -173,9 +186,16 @@ export class CanvasRenderer {
   /**
    * Draw a filled rectangle
    */
-  rect(x: number, y: number, width: number, height: number, color: string, alpha: number = 1): void {
+  rect(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    color: string,
+    alpha: number = 1
+  ): void {
     if (!this.ctx) return;
-    
+
     const prevAlpha = this.ctx.globalAlpha;
     this.ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
     this.ctx.fillStyle = color;
@@ -186,9 +206,17 @@ export class CanvasRenderer {
   /**
    * Draw a stroked rectangle (outline only)
    */
-  strokeRect(x: number, y: number, width: number, height: number, color: string, lineWidth: number = 1, alpha: number = 1): void {
+  strokeRect(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    color: string,
+    lineWidth: number = 1,
+    alpha: number = 1
+  ): void {
     if (!this.ctx) return;
-    
+
     const prevAlpha = this.ctx.globalAlpha;
     this.ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
     this.ctx.strokeStyle = color;
@@ -215,7 +243,14 @@ export class CanvasRenderer {
   /**
    * Draw a stroked circle (outline only)
    */
-  strokeCircle(x: number, y: number, radius: number, color: string, lineWidth: number = 1, alpha: number = 1): void {
+  strokeCircle(
+    x: number,
+    y: number,
+    radius: number,
+    color: string,
+    lineWidth: number = 1,
+    alpha: number = 1
+  ): void {
     if (!this.ctx) return;
 
     const prevAlpha = this.ctx.globalAlpha;
@@ -231,7 +266,15 @@ export class CanvasRenderer {
   /**
    * Draw a line
    */
-  line(x1: number, y1: number, x2: number, y2: number, color: string, width: number = 1, alpha: number = 1): void {
+  line(
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    color: string,
+    width: number = 1,
+    alpha: number = 1
+  ): void {
     if (!this.ctx) return;
 
     const prevAlpha = this.ctx.globalAlpha;
@@ -287,5 +330,4 @@ export class CanvasRenderer {
       img.src = path;
     });
   }
-
 }

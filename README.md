@@ -42,9 +42,9 @@ Or use the bundled version in the browser:
 ### Node.js / TypeScript
 
 ```typescript
-import { Ragelang } from 'ragelang';
+import { Ragelang } from "ragelang";
 
-const canvas = document.getElementById('canvas') as HTMLCanvasElement;
+const canvas = document.getElementById("canvas") as HTMLCanvasElement;
 const ragelang = new Ragelang({ canvas, width: 800, height: 600 });
 
 const code = `
@@ -65,9 +65,9 @@ ragelang.start();
 <script src="https://unpkg.com/ragelang/dist/ragelang.bundle.min.js"></script>
 <script>
   const { Ragelang } = window.RagelangLib;
-  const canvas = document.getElementById('canvas');
+  const canvas = document.getElementById("canvas");
   const ragelang = new Ragelang({ canvas, width: 800, height: 600 });
-  
+
   ragelang.run(code);
   ragelang.start();
 </script>
@@ -108,3 +108,4 @@ npm test
 
 ## License
 MIT
+```

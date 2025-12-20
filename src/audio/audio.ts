@@ -25,15 +25,19 @@ export class AudioManager {
    */
   private init(): void {
     if (this.initialized) return;
-    
+
     try {
-      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext })
+          .webkitAudioContext;
+      this.audioContext = new AudioContextClass();
       this.masterGain = this.audioContext.createGain();
       this.masterGain.gain.value = this.masterVolume;
       this.masterGain.connect(this.audioContext.destination);
       this.initialized = true;
-    } catch (e) {
-      console.warn('Web Audio API not supported, audio disabled');
+    } catch {
+      console.warn("Web Audio API not supported, audio disabled");
     }
   }
 
@@ -41,7 +45,7 @@ export class AudioManager {
    * Resume audio context if suspended (browser autoplay policy)
    */
   private async resume(): Promise<void> {
-    if (this.audioContext?.state === 'suspended') {
+    if (this.audioContext?.state === "suspended") {
       await this.audioContext.resume();
     }
   }
@@ -55,7 +59,7 @@ export class AudioManager {
     // Stop current music if path is null or different
     if (this.musicElement) {
       this.musicElement.pause();
-      this.musicElement.src = '';
+      this.musicElement.src = "";
       this.musicElement = null;
     }
 
@@ -65,7 +69,7 @@ export class AudioManager {
     this.musicElement = new Audio(path);
     this.musicElement.loop = true;
     this.musicElement.volume = Math.min(1, Math.max(0, volume / 10));
-    
+
     try {
       await this.musicElement.play();
     } catch (e) {
@@ -79,7 +83,7 @@ export class AudioManager {
   stopMusic(): void {
     if (this.musicElement) {
       this.musicElement.pause();
-      this.musicElement.src = '';
+      this.musicElement.src = "";
       this.musicElement = null;
     }
   }
@@ -101,7 +105,7 @@ export class AudioManager {
    */
   async sound(path: string, gain: number = 5): Promise<void> {
     this.init();
-    
+
     if (!this.audioContext || !this.masterGain) {
       // Fallback to HTMLAudioElement
       const audio = new Audio(path);
@@ -119,7 +123,7 @@ export class AudioManager {
     try {
       // Check cache first
       let buffer = this.soundCache.get(path);
-      
+
       if (!buffer) {
         // Load the audio file
         const response = await fetch(path);
@@ -131,19 +135,19 @@ export class AudioManager {
       // Create source and gain nodes
       const source = this.audioContext.createBufferSource();
       const gainNode = this.audioContext.createGain();
-      
+
       source.buffer = buffer;
       gainNode.gain.value = Math.min(1, Math.max(0, gain / 10));
-      
+
       source.connect(gainNode);
       gainNode.connect(this.masterGain);
-      
+
       // Track active sounds for cleanup
       this.activeSounds.add(source);
       source.onended = () => {
         this.activeSounds.delete(source);
       };
-      
+
       source.start(0);
     } catch (e) {
       console.warn(`Failed to play sound: ${path}`, e);
@@ -157,7 +161,7 @@ export class AudioManager {
     for (const source of this.activeSounds) {
       try {
         source.stop();
-      } catch (e) {
+      } catch {
         // Already stopped
       }
     }
@@ -181,14 +185,13 @@ export class AudioManager {
   dispose(): void {
     this.stopMusic();
     this.stopAllSounds();
-    
+
     if (this.audioContext) {
       this.audioContext.close();
       this.audioContext = null;
     }
-    
+
     this.soundCache.clear();
     this.initialized = false;
   }
 }
-

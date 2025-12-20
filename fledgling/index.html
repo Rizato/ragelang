@@ -1,45 +1,45 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fledgling - A Ragelang Game</title>
-  <link rel="stylesheet" href="assets/css/style.css">
-  <script src="/assets/js/ragelang.bundle.js"></script>
-</head>
-<body>
-  <div id="game-container">
-    <canvas id="game-canvas"></canvas>
-    
-    <!-- Editor Toggle Button -->
-    <button id="editor-toggle">Edit Code</button>
-  </div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fledgling - A Ragelang Game</title>
+    <link rel="stylesheet" href="assets/css/style.css" />
+    <script src="/assets/js/ragelang.bundle.js"></script>
+  </head>
+  <body>
+    <div id="game-container">
+      <canvas id="game-canvas"></canvas>
 
-  <!-- Code Editor Overlay -->
-  <div id="code-editor-overlay">
-    <div id="code-editor-container">
-      <div id="code-editor-header">
-        <h2 id="code-editor-title">Edit Code</h2>
-      </div>
-      <textarea id="code-editor"></textarea>
-      <div class="editor-buttons">
-        <button class="menu-button secondary" id="code-cancel-btn">Cancel</button>
-        <button class="menu-button primary" id="code-save-btn">Save & Restart</button>
+      <!-- Editor Toggle Button -->
+      <button id="editor-toggle">Edit Code</button>
+    </div>
+
+    <!-- Code Editor Overlay -->
+    <div id="code-editor-overlay">
+      <div id="code-editor-container">
+        <div id="code-editor-header">
+          <h2 id="code-editor-title">Edit Code</h2>
+        </div>
+        <textarea id="code-editor"></textarea>
+        <div class="editor-buttons">
+          <button class="menu-button secondary" id="code-cancel-btn">Cancel</button>
+          <button class="menu-button primary" id="code-save-btn">Save & Restart</button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Confirmation Dialog -->
-  <div id="confirm-dialog">
-    <div class="confirm-dialog">
-      <div class="confirm-message" id="confirm-message">Are you sure?</div>
-      <div class="confirm-buttons">
-        <button class="btn-confirm secondary" id="confirm-no">No</button>
-        <button class="btn-confirm primary" id="confirm-yes">Yes</button>
+    <!-- Confirmation Dialog -->
+    <div id="confirm-dialog">
+      <div class="confirm-dialog">
+        <div class="confirm-message" id="confirm-message">Are you sure?</div>
+        <div class="confirm-buttons">
+          <button class="btn-confirm secondary" id="confirm-no">No</button>
+          <button class="btn-confirm primary" id="confirm-yes">Yes</button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <script type="module" src="src/game.js"></script>
-</body>
+    <script type="module" src="src/game.js"></script>
+  </body>
 </html>

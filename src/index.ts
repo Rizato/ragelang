@@ -1,25 +1,25 @@
 /**
  * Ragelang - A rage-inducing programming language
- * 
+ *
  * In Ragelang, all characters must be supported by characters beneath them,
  * or they will fall until they land on another character or fall out entirely.
  */
 
-export { Lexer } from './lexer/lexer.js';
-export { TokenType, type Token } from './lexer/tokens.js';
-export { Parser } from './parser/parser.js';
-export * from './parser/ast.js';
-export { FallingProcessor } from './falling/processor.js';
-export { Interpreter } from './runtime/interpreter.js';
-export { CanvasRenderer } from './renderer/canvas.js';
-export { AudioManager } from './audio/audio.js';
-export { InputManager } from './input/input.js';
+export { Lexer } from "./lexer/lexer.js";
+export { TokenType, type Token } from "./lexer/tokens.js";
+export { Parser } from "./parser/parser.js";
+export * from "./parser/ast.js";
+export { FallingProcessor } from "./falling/processor.js";
+export { Interpreter } from "./runtime/interpreter.js";
+export { CanvasRenderer } from "./renderer/canvas.js";
+export { AudioManager } from "./audio/audio.js";
+export { InputManager } from "./input/input.js";
 
-import { FallingProcessor } from './falling/processor.js';
-import { Lexer } from './lexer/lexer.js';
-import { Parser } from './parser/parser.js';
-import { Interpreter } from './runtime/interpreter.js';
-import { CanvasRenderer, type RenderContext } from './renderer/canvas.js';
+import { FallingProcessor } from "./falling/processor.js";
+import { Lexer } from "./lexer/lexer.js";
+import { Parser } from "./parser/parser.js";
+import { Interpreter } from "./runtime/interpreter.js";
+import { CanvasRenderer, type RenderContext } from "./renderer/canvas.js";
 
 export interface RagelangOptions {
   canvas?: HTMLCanvasElement | null;
@@ -41,26 +41,26 @@ export class Ragelang {
 
   constructor(options: RagelangOptions = {}) {
     this.canvas = options.canvas ?? null;
-    this.basePath = options.basePath ?? '';
+    this.basePath = options.basePath ?? "";
     this.renderer = new CanvasRenderer(this.canvas, {
       width: options.width ?? 800,
-      height: options.height ?? 600
+      height: options.height ?? 600,
     });
     this.interpreter = new Interpreter(this.renderer);
-    
+
     // Set up internal scene change handling
     this.interpreter.setOnSceneChange((path: string) => {
       this.handleSceneChange(path);
     });
   }
-  
+
   /**
    * Internal handler for scene changes triggered by load_scene()
    */
   private async handleSceneChange(path: string): Promise<void> {
     // Resolve path relative to basePath
     const fullPath = this.resolvePath(path);
-    
+
     try {
       // Fetch the new scene code
       const response = await fetch(fullPath);
@@ -68,13 +68,13 @@ export class Ragelang {
         throw new Error(`Failed to load scene: ${response.status} ${response.statusText}`);
       }
       const code = await response.text();
-      
+
       // Stop current game
       this.stop();
-      
+
       // Reset the interpreter for the new scene
       this.interpreter.reset();
-      
+
       // Run the new scene
       this.run(code);
       this.start();
@@ -82,17 +82,17 @@ export class Ragelang {
       console.error(`Failed to load scene "${path}":`, error);
     }
   }
-  
+
   /**
    * Resolve a path relative to basePath
    */
   private resolvePath(path: string): string {
     // If path is absolute (starts with / or http), use as-is
-    if (path.startsWith('/') || path.startsWith('http://') || path.startsWith('https://')) {
+    if (path.startsWith("/") || path.startsWith("http://") || path.startsWith("https://")) {
       return path;
     }
     // Otherwise resolve relative to basePath
-    if (this.basePath && !this.basePath.endsWith('/')) {
+    if (this.basePath && !this.basePath.endsWith("/")) {
       return `${this.basePath}/${path}`;
     }
     return `${this.basePath}${path}`;
@@ -148,7 +148,7 @@ export class Ragelang {
   getRenderContext(): RenderContext | null {
     return this.renderer.getContext();
   }
-  
+
   /**
    * Check if game loop is running
    */
@@ -156,4 +156,3 @@ export class Ragelang {
     return this.isRunning;
   }
 }
-
