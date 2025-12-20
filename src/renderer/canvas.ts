@@ -45,6 +45,10 @@ export class CanvasRenderer {
    * Get canvas width
    */
   getWidth(): number {
+    // Return actual canvas width if available, otherwise stored width
+    if (this.canvas) {
+      return this.canvas.width;
+    }
     return this.width;
   }
 
@@ -52,6 +56,10 @@ export class CanvasRenderer {
    * Get canvas height
    */
   getHeight(): number {
+    // Return actual canvas height if available, otherwise stored height
+    if (this.canvas) {
+      return this.canvas.height;
+    }
     return this.height;
   }
 
@@ -59,10 +67,10 @@ export class CanvasRenderer {
    * Clear the canvas
    */
   clear(color: string = "#000000"): void {
-    if (!this.ctx) return;
+    if (!this.ctx || !this.canvas) return;
 
     this.ctx.fillStyle = color;
-    this.ctx.fillRect(0, 0, this.width, this.height);
+    this.ctx.fillRect(0, 0, this.getWidth(), this.getHeight());
   }
 
   /**
@@ -301,6 +309,18 @@ export class CanvasRenderer {
    */
   getDimensions(): { width: number; height: number } {
     return { width: this.width, height: this.height };
+  }
+
+  /**
+   * Update canvas dimensions
+   */
+  setDimensions(width: number, height: number): void {
+    this.width = width;
+    this.height = height;
+    if (this.canvas) {
+      this.canvas.width = width;
+      this.canvas.height = height;
+    }
   }
 
   /**
