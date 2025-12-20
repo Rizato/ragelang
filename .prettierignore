@@ -1,0 +1,8 @@
+node_modules
+dist
+out
+*.bundle.js
+*.bundle.min.js
+package-lock.json
+*.vsix
+
