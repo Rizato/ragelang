@@ -143,3 +143,5 @@ vite.config.ts.timestamp-*
 
 # ignore bundle
 ragelang.bundle.js
+
+*.aseprite

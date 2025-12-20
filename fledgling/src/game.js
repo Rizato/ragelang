@@ -5,6 +5,14 @@ let gameCode = '';
 let currentScenePath = 'assets/rage/menu.rage'; // Start with menu
 let isEditorOpen = false;
 
+// Helper function to focus the canvas
+function focusCanvas() {
+  const canvas = document.getElementById('game-canvas');
+  if (canvas && !isEditorOpen) {
+    canvas.focus();
+  }
+}
+
 // Load rage code from a path
 async function loadRageCode(path) {
   try {
@@ -49,6 +57,34 @@ function showConfirm(message, onConfirm) {
 // Initialize and run game
 async function initGame() {
   const canvas = document.getElementById('game-canvas');
+
+  // Set up canvas focus handling (only once)
+  canvas.setAttribute('tabindex', '0');
+  canvas.setAttribute('style', 'outline: none;'); // Remove focus outline
+  
+  // Re-focus canvas when it loses focus (e.g., after clicking elsewhere)
+  // Use a small delay to avoid conflicts with other focus operations
+  let blurTimeout = null;
+  const blurHandler = () => {
+    // Only refocus if editor is not open
+    if (!isEditorOpen) {
+      if (blurTimeout) clearTimeout(blurTimeout);
+      blurTimeout = setTimeout(() => {
+        if (!isEditorOpen && document.activeElement !== canvas) {
+          focusCanvas();
+        }
+      }, 10);
+    }
+  };
+  canvas.addEventListener('blur', blurHandler);
+  
+  // Also refocus when clicking on the canvas
+  const clickHandler = () => {
+    if (!isEditorOpen) {
+      focusCanvas();
+    }
+  };
+  canvas.addEventListener('click', clickHandler);
 
   // Set canvas to full screen
   function resizeCanvas() {
@@ -95,35 +131,16 @@ async function loadInitialScene() {
     basePath: '' // Paths are relative to index.html location
   });
 
-  // Make canvas focusable and focus it to capture keyboard input
-  canvas.setAttribute('tabindex', '0');
-  canvas.focus();
-  
-  // Re-focus canvas when it loses focus (e.g., after clicking elsewhere)
-  canvas.addEventListener('blur', () => {
-    // Only refocus if editor is not open
-    if (!isEditorOpen) {
-      canvas.focus();
-    }
-  });
-
-  // Make canvas focusable and focus it to capture keyboard input
-  canvas.setAttribute('tabindex', '0');
-  canvas.focus();
-  
-  // Re-focus canvas when it loses focus (e.g., after clicking elsewhere)
-  canvas.addEventListener('blur', () => {
-    // Only refocus if editor is not open
-    if (!isEditorOpen) {
-      canvas.focus();
-    }
-  });
-
   // Run the scene
   // Note: ragelang.run() automatically runs the FallingProcessor preprocessor
   // before tokenizing, parsing, and interpreting the code
   ragelang.run(code);
   ragelang.start();
+  
+  // Focus the canvas after starting the game
+  setTimeout(() => {
+    focusCanvas();
+  }, 50);
 }
 
 // Restart game (reloads current scene from editor)
@@ -145,12 +162,13 @@ function restartGame() {
     basePath: ''
   });
   
-  // Ensure canvas is focusable and focused
-  canvas.setAttribute('tabindex', '0');
-  canvas.focus();
-  
   ragelang.run(gameCode);
   ragelang.start();
+  
+  // Focus canvas after a short delay to ensure it gets focus
+  setTimeout(() => {
+    focusCanvas();
+  }, 50);
 }
 
 // Setup editor
@@ -162,13 +180,16 @@ function setupEditor() {
   const cancelBtn = document.getElementById('code-cancel-btn');
 
   // Toggle editor
-  editorToggle.addEventListener('click', () => {
+  editorToggle.addEventListener('click', (e) => {
+    e.preventDefault();
     if (isEditorOpen) {
       editorOverlay.classList.remove('active');
       isEditorOpen = false;
       if (ragelang) {
         ragelang.start();
       }
+      // Refocus canvas when closing editor
+      setTimeout(() => focusCanvas(), 50);
     } else {
       editorOverlay.classList.add('active');
       isEditorOpen = true;
@@ -176,6 +197,8 @@ function setupEditor() {
       if (ragelang) {
         ragelang.stop();
       }
+      // Focus the editor textarea
+      setTimeout(() => editor.focus(), 50);
     }
   });
 
@@ -192,27 +215,25 @@ function setupEditor() {
 
   // Cancel
   cancelBtn.addEventListener('click', () => {
-    const canvas = document.getElementById('game-canvas');
     editorOverlay.classList.remove('active');
     isEditorOpen = false;
     if (ragelang) {
       ragelang.start();
     }
     // Refocus canvas when canceling editor
-    canvas.focus();
+    setTimeout(() => focusCanvas(), 50);
   });
 
   // Close on Escape
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && isEditorOpen) {
-      const canvas = document.getElementById('game-canvas');
       editorOverlay.classList.remove('active');
       isEditorOpen = false;
       if (ragelang) {
         ragelang.start();
       }
       // Refocus canvas when closing editor with Escape
-      canvas.focus();
+      setTimeout(() => focusCanvas(), 50);
     }
   });
 }

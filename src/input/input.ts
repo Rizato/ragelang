@@ -190,6 +190,9 @@ export class InputManager {
    * Check if an action is currently held
    */
   held(action: string): boolean {
+    // Check for exact match before translated keys like jump, interact, etc.
+    if (this.keysDown.has(action.toLowerCase())) return true;
+
     // Check keyboard
     const keys = ACTION_KEYS[action.toLowerCase()];
     if (keys) {
@@ -211,6 +214,9 @@ export class InputManager {
    * Check if an action was just released this frame
    */
   released(action: string): boolean {
+    // Check for exact match before translated keys like jump, interact, etc.
+    if (this.keysReleased.has(action.toLowerCase())) return true;
+
     const keys = ACTION_KEYS[action.toLowerCase()];
     if (keys) {
       for (const key of keys) {
