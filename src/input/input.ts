@@ -9,36 +9,36 @@ export interface InputOptions {
 
 // Action mappings for unified input
 const ACTION_KEYS: Record<string, string[]> = {
-  'left': ['ArrowLeft', 'KeyA'],
-  'right': ['ArrowRight', 'KeyD'],
-  'up': ['ArrowUp', 'KeyW'],
-  'down': ['ArrowDown', 'KeyS'],
-  'jump': ['Space'],
-  'start': ['Escape'],
-  'interact': ['KeyE'],
+  left: ["ArrowLeft", "KeyA"],
+  right: ["ArrowRight", "KeyD"],
+  up: ["ArrowUp", "KeyW"],
+  down: ["ArrowDown", "KeyS"],
+  jump: ["Space"],
+  start: ["Escape"],
+  interact: ["KeyE"],
 };
 
 // Gamepad button indices (standard mapping)
 const GAMEPAD_ACTIONS: Record<string, number[]> = {
-  'a': [0],     // A/Cross
-  'jump': [0],
-  'b': [1],   // B/Circle
-  'x': [2], // X/Square
-  'interact': [2],
-  'y': [3], // Y/Triangle
-  'start': [9], // Start/Pause
-  'select': [8], // Select/Menu
-  'right_shoulder': [5], // Right Shoulder/R1
-  'left_trigger': [6], // Left Trigger/L2
-  'right_trigger': [7], // Right Trigger/R2
-  'left_stick_up': [10], // Left Stick Up/D-Pad Up
-  'left_stick_down': [11], // Left Stick Down/D-Pad Down
-  'left_stick_left': [12], // Left Stick Left/D-Pad Left
-  'left_stick_right': [13], // Left Stick Right/D-Pad Right
-  'right_stick_up': [14], // Right Stick Up/D-Pad Up
-  'right_stick_down': [15], // Right Stick Down/D-Pad Down
-  'right_stick_left': [16], // Right Stick Left/D-Pad Left
-  'right_stick_right': [17], // Right Stick Right/D-Pad Right
+  a: [0], // A/Cross
+  jump: [0],
+  b: [1], // B/Circle
+  x: [2], // X/Square
+  interact: [2],
+  y: [3], // Y/Triangle
+  start: [9], // Start/Pause
+  select: [8], // Select/Menu
+  right_shoulder: [5], // Right Shoulder/R1
+  left_trigger: [6], // Left Trigger/L2
+  right_trigger: [7], // Right Trigger/R2
+  left_stick_up: [10], // Left Stick Up/D-Pad Up
+  left_stick_down: [11], // Left Stick Down/D-Pad Down
+  left_stick_left: [12], // Left Stick Left/D-Pad Left
+  left_stick_right: [13], // Left Stick Right/D-Pad Right
+  right_stick_up: [14], // Right Stick Up/D-Pad Up
+  right_stick_down: [15], // Right Stick Down/D-Pad Down
+  right_stick_left: [16], // Right Stick Left/D-Pad Left
+  right_stick_right: [17], // Right Stick Right/D-Pad Right
 };
 
 // Gamepad axes for directions
@@ -46,14 +46,14 @@ const GAMEPAD_AXIS_THRESHOLD = 0.5;
 
 export class InputManager {
   private canvas: HTMLCanvasElement | null = null;
-  
+
   // Keyboard state (double-buffered for proper frame timing)
   private keysDown: Set<string> = new Set();
-  private keysPressedBuffer: Set<string> = new Set();  // Accumulates between frames
-  private keysPressed: Set<string> = new Set();  // Just pressed this frame (read by game)
+  private keysPressedBuffer: Set<string> = new Set(); // Accumulates between frames
+  private keysPressed: Set<string> = new Set(); // Just pressed this frame (read by game)
   private keysReleasedBuffer: Set<string> = new Set(); // Accumulates between frames
   private keysReleased: Set<string> = new Set(); // Just released this frame (read by game)
-  
+
   // Mouse/Touch state (double-buffered)
   private mouseX: number = 0;
   private mouseY: number = 0;
@@ -62,21 +62,21 @@ export class InputManager {
   private mouseJustPressed: Set<number> = new Set();
   private mouseJustReleasedBuffer: Set<number> = new Set();
   private mouseJustReleased: Set<number> = new Set();
-  
+
   // Touch state (for mobile, double-buffered)
   private touches: Map<number, { x: number; y: number }> = new Map();
   private touchJustStartedBuffer: boolean = false;
   private touchJustStarted: boolean = false;
   private touchJustEndedBuffer: boolean = false;
   private touchJustEnded: boolean = false;
-  
+
   // Gamepad state
   private gamepadIndex: number | null = null;
   private prevGamepadButtons: boolean[] = [];
-  
+
   // Input buffer for platformer mechanics (action -> expiry timestamp)
   private inputBuffer: Map<string, number> = new Map();
-  
+
   // Frame tracking
   private initialized: boolean = false;
 
@@ -98,32 +98,32 @@ export class InputManager {
    * Initialize input listeners
    */
   private init(): void {
-    if (this.initialized || typeof window === 'undefined') return;
-    
+    if (this.initialized || typeof window === "undefined") return;
+
     // Keyboard events
-    window.addEventListener('keydown', this.onKeyDown);
-    window.addEventListener('keyup', this.onKeyUp);
-    
+    window.addEventListener("keydown", this.onKeyDown);
+    window.addEventListener("keyup", this.onKeyUp);
+
     // Mouse events (on canvas or window)
     const target = this.canvas || window;
-    target.addEventListener('mousedown', this.onMouseDown as EventListener);
-    target.addEventListener('mouseup', this.onMouseUp as EventListener);
-    target.addEventListener('mousemove', this.onMouseMove as EventListener);
-    
+    target.addEventListener("mousedown", this.onMouseDown as EventListener);
+    target.addEventListener("mouseup", this.onMouseUp as EventListener);
+    target.addEventListener("mousemove", this.onMouseMove as EventListener);
+
     // Touch events
-    target.addEventListener('touchstart', this.onTouchStart as EventListener);
-    target.addEventListener('touchend', this.onTouchEnd as EventListener);
-    target.addEventListener('touchmove', this.onTouchMove as EventListener);
-    
+    target.addEventListener("touchstart", this.onTouchStart as EventListener);
+    target.addEventListener("touchend", this.onTouchEnd as EventListener);
+    target.addEventListener("touchmove", this.onTouchMove as EventListener);
+
     // Gamepad events
-    window.addEventListener('gamepadconnected', this.onGamepadConnected);
-    window.addEventListener('gamepaddisconnected', this.onGamepadDisconnected);
-    
+    window.addEventListener("gamepadconnected", this.onGamepadConnected);
+    window.addEventListener("gamepaddisconnected", this.onGamepadDisconnected);
+
     // Prevent context menu on right-click
     if (this.canvas) {
-      this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+      this.canvas.addEventListener("contextmenu", (e) => e.preventDefault());
     }
-    
+
     this.initialized = true;
   }
 
@@ -139,19 +139,19 @@ export class InputManager {
     this.keysPressedBuffer = new Set();
     this.keysReleased = this.keysReleasedBuffer;
     this.keysReleasedBuffer = new Set();
-    
+
     // Mouse
     this.mouseJustPressed = this.mouseJustPressedBuffer;
     this.mouseJustPressedBuffer = new Set();
     this.mouseJustReleased = this.mouseJustReleasedBuffer;
     this.mouseJustReleasedBuffer = new Set();
-    
+
     // Touch
     this.touchJustStarted = this.touchJustStartedBuffer;
     this.touchJustStartedBuffer = false;
     this.touchJustEnded = this.touchJustEndedBuffer;
     this.touchJustEndedBuffer = false;
-    
+
     // Poll gamepad
     this.pollGamepad();
   }
@@ -179,10 +179,10 @@ export class InputManager {
         if (this.keysPressed.has(key)) return true;
       }
     }
-    
+
     // Check gamepad
     if (this.isGamepadActionPressed(action)) return true;
-    
+
     return false;
   }
 
@@ -200,13 +200,13 @@ export class InputManager {
         if (this.keysDown.has(key)) return true;
       }
     }
-    
+
     // Check gamepad buttons
     if (this.isGamepadActionHeld(action)) return true;
-    
+
     // Check gamepad axes for directional actions
     if (this.isGamepadDirectionHeld(action)) return true;
-    
+
     return false;
   }
 
@@ -223,10 +223,10 @@ export class InputManager {
         if (this.keysReleased.has(key)) return true;
       }
     }
-    
+
     // Check gamepad
     if (this.isGamepadActionReleased(action)) return true;
-    
+
     return false;
   }
 
@@ -256,25 +256,25 @@ export class InputManager {
   private normalizeKey(key: string): string {
     // Handle common key names
     const keyMap: Record<string, string> = {
-      'space': 'Space',
-      'enter': 'Enter',
-      'escape': 'Escape',
-      'tab': 'Tab',
-      'shift': 'ShiftLeft',
-      'ctrl': 'ControlLeft',
-      'alt': 'AltLeft',
-      'left': 'ArrowLeft',
-      'right': 'ArrowRight',
-      'up': 'ArrowUp',
-      'down': 'ArrowDown',
+      space: "Space",
+      enter: "Enter",
+      escape: "Escape",
+      tab: "Tab",
+      shift: "ShiftLeft",
+      ctrl: "ControlLeft",
+      alt: "AltLeft",
+      left: "ArrowLeft",
+      right: "ArrowRight",
+      up: "ArrowUp",
+      down: "ArrowDown",
     };
-    
+
     const lower = key.toLowerCase();
     if (keyMap[lower]) return keyMap[lower];
-    
+
     // Single letter keys
     if (key.length === 1) return `Key${key.toUpperCase()}`;
-    
+
     return key;
   }
 
@@ -288,7 +288,7 @@ export class InputManager {
    * @param duration - How long to buffer in seconds (e.g., 0.1 for 100ms)
    */
   bufferInput(action: string, duration: number): void {
-    const expiryTime = performance.now() + (duration * 1000);
+    const expiryTime = performance.now() + duration * 1000;
     this.inputBuffer.set(action.toLowerCase(), expiryTime);
   }
 
@@ -301,15 +301,15 @@ export class InputManager {
   checkBuffer(action: string): boolean {
     const key = action.toLowerCase();
     const expiry = this.inputBuffer.get(key);
-    
+
     if (expiry === undefined) return false;
-    
+
     // Check if buffer has expired
     if (performance.now() > expiry) {
       this.inputBuffer.delete(key);
       return false;
     }
-    
+
     // Consume the buffer
     this.inputBuffer.delete(key);
     return true;
@@ -322,15 +322,15 @@ export class InputManager {
   peekBuffer(action: string): boolean {
     const key = action.toLowerCase();
     const expiry = this.inputBuffer.get(key);
-    
+
     if (expiry === undefined) return false;
-    
+
     // Check if buffer has expired
     if (performance.now() > expiry) {
       this.inputBuffer.delete(key);
       return false;
     }
-    
+
     return true;
   }
 
@@ -357,15 +357,15 @@ export class InputManager {
   getBufferTime(action: string): number {
     const key = action.toLowerCase();
     const expiry = this.inputBuffer.get(key);
-    
+
     if (expiry === undefined) return 0;
-    
+
     const remaining = (expiry - performance.now()) / 1000;
     if (remaining <= 0) {
       this.inputBuffer.delete(key);
       return 0;
     }
-    
+
     return remaining;
   }
 
@@ -427,14 +427,14 @@ export class InputManager {
 
   private pollGamepad(): void {
     if (this.gamepadIndex === null) return;
-    
+
     const gamepads = navigator.getGamepads();
     const gamepad = gamepads[this.gamepadIndex];
-    
+
     if (!gamepad) return;
-    
+
     // Update button state for press/release detection
-    const currentButtons = gamepad.buttons.map(b => b.pressed);
+    const currentButtons = gamepad.buttons.map((b) => b.pressed);
     this.prevGamepadButtons = currentButtons;
   }
 
@@ -447,68 +447,68 @@ export class InputManager {
   private isGamepadActionPressed(action: string): boolean {
     const gamepad = this.getGamepad();
     if (!gamepad) return false;
-    
+
     const buttons = GAMEPAD_ACTIONS[action.toLowerCase()];
     if (!buttons) return false;
-    
+
     for (const btnIndex of buttons) {
       const current = gamepad.buttons[btnIndex]?.pressed ?? false;
       const prev = this.prevGamepadButtons[btnIndex] ?? false;
       if (current && !prev) return true;
     }
-    
+
     return false;
   }
 
   private isGamepadActionHeld(action: string): boolean {
     const gamepad = this.getGamepad();
     if (!gamepad) return false;
-    
+
     const buttons = GAMEPAD_ACTIONS[action.toLowerCase()];
     if (!buttons) return false;
-    
+
     for (const btnIndex of buttons) {
       if (gamepad.buttons[btnIndex]?.pressed) return true;
     }
-    
+
     return false;
   }
 
   private isGamepadActionReleased(action: string): boolean {
     const gamepad = this.getGamepad();
     if (!gamepad) return false;
-    
+
     const buttons = GAMEPAD_ACTIONS[action.toLowerCase()];
     if (!buttons) return false;
-    
+
     for (const btnIndex of buttons) {
       const current = gamepad.buttons[btnIndex]?.pressed ?? false;
       const prev = this.prevGamepadButtons[btnIndex] ?? false;
       if (!current && prev) return true;
     }
-    
+
     return false;
   }
 
   private isGamepadDirectionHeld(action: string): boolean {
     const gamepad = this.getGamepad();
     if (!gamepad) return false;
-    
+
     const axes = gamepad.axes;
     const lowerAction = action.toLowerCase();
-    
+
     // Left stick (axes 0, 1) and D-pad (buttons 12-15)
     switch (lowerAction) {
-      case 'left':
+      case "left":
         return axes[0] < -GAMEPAD_AXIS_THRESHOLD || gamepad.buttons[14]?.pressed;
-      case 'right':
+      case "right":
         return axes[0] > GAMEPAD_AXIS_THRESHOLD || gamepad.buttons[15]?.pressed;
-      case 'up':
+      case "up":
         return axes[1] < -GAMEPAD_AXIS_THRESHOLD || gamepad.buttons[12]?.pressed;
-      case 'down':
+      case "down":
         return axes[1] > GAMEPAD_AXIS_THRESHOLD || gamepad.buttons[13]?.pressed;
     }
-    
+
     return false;
   }
 
@@ -516,8 +516,17 @@ export class InputManager {
 
   // Keys that should have default behavior prevented when game is active
   private readonly GAME_KEYS = new Set([
-    'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
-    'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyZ', 'KeyX'
+    "Space",
+    "ArrowUp",
+    "ArrowDown",
+    "ArrowLeft",
+    "ArrowRight",
+    "KeyW",
+    "KeyA",
+    "KeyS",
+    "KeyD",
+    "KeyZ",
+    "KeyX",
   ]);
 
   /**
@@ -533,18 +542,18 @@ export class InputManager {
   private onKeyDown = (e: KeyboardEvent): void => {
     // Only capture game keys when canvas has focus
     const shouldCapture = this.canvasFocused();
-    
+
     // Prevent default for game control keys only when canvas is focused
     // (stops spacebar scrolling, arrow key scrolling, etc.)
     if (shouldCapture && this.GAME_KEYS.has(e.code)) {
       e.preventDefault();
     }
-    
+
     // Always track key state for consistency, but game code should check focus
     if (!this.keysDown.has(e.code)) {
       // Only add to pressed buffer if canvas has focus
       if (shouldCapture) {
-        this.keysPressedBuffer.add(e.code);  // Write to buffer
+        this.keysPressedBuffer.add(e.code); // Write to buffer
       }
     }
     if (shouldCapture) {
@@ -554,30 +563,30 @@ export class InputManager {
 
   private onKeyUp = (e: KeyboardEvent): void => {
     const shouldCapture = this.canvasFocused();
-    
+
     // Prevent default for game control keys only when canvas is focused
     if (shouldCapture && this.GAME_KEYS.has(e.code)) {
       e.preventDefault();
     }
-    
+
     // Only process key up if we were tracking this key
     if (this.keysDown.has(e.code)) {
       this.keysDown.delete(e.code);
       if (shouldCapture) {
-        this.keysReleasedBuffer.add(e.code);  // Write to buffer
+        this.keysReleasedBuffer.add(e.code); // Write to buffer
       }
     }
   };
 
   private onMouseDown = (e: MouseEvent): void => {
     this.mouseButtons.add(e.button);
-    this.mouseJustPressedBuffer.add(e.button);  // Write to buffer
+    this.mouseJustPressedBuffer.add(e.button); // Write to buffer
     this.updateMousePosition(e);
   };
 
   private onMouseUp = (e: MouseEvent): void => {
     this.mouseButtons.delete(e.button);
-    this.mouseJustReleasedBuffer.add(e.button);  // Write to buffer
+    this.mouseJustReleasedBuffer.add(e.button); // Write to buffer
   };
 
   private onMouseMove = (e: MouseEvent): void => {
@@ -596,9 +605,9 @@ export class InputManager {
   }
 
   private onTouchStart = (e: TouchEvent): void => {
-    this.touchJustStartedBuffer = true;  // Write to buffer
+    this.touchJustStartedBuffer = true; // Write to buffer
     this.updateTouches(e);
-    
+
     // Use first touch as mouse position
     if (e.touches.length > 0) {
       this.updateTouchPosition(e.touches[0]);
@@ -607,7 +616,7 @@ export class InputManager {
 
   private onTouchEnd = (e: TouchEvent): void => {
     if (e.touches.length === 0) {
-      this.touchJustEndedBuffer = true;  // Write to buffer
+      this.touchJustEndedBuffer = true; // Write to buffer
       this.touches.clear();
     } else {
       this.updateTouches(e);
@@ -616,7 +625,7 @@ export class InputManager {
 
   private onTouchMove = (e: TouchEvent): void => {
     this.updateTouches(e);
-    
+
     if (e.touches.length > 0) {
       this.updateTouchPosition(e.touches[0]);
     }
@@ -628,13 +637,13 @@ export class InputManager {
       const touch = e.touches[i];
       let x = touch.clientX;
       let y = touch.clientY;
-      
+
       if (this.canvas) {
         const rect = this.canvas.getBoundingClientRect();
         x -= rect.left;
         y -= rect.top;
       }
-      
+
       this.touches.set(touch.identifier, { x, y });
     }
   }
@@ -651,12 +660,12 @@ export class InputManager {
   }
 
   private onGamepadConnected = (e: GamepadEvent): void => {
-    console.log('Gamepad connected:', e.gamepad.id);
+    console.log("Gamepad connected:", e.gamepad.id);
     this.gamepadIndex = e.gamepad.index;
   };
 
   private onGamepadDisconnected = (e: GamepadEvent): void => {
-    console.log('Gamepad disconnected:', e.gamepad.id);
+    console.log("Gamepad disconnected:", e.gamepad.id);
     if (this.gamepadIndex === e.gamepad.index) {
       this.gamepadIndex = null;
       this.prevGamepadButtons = [];
@@ -667,23 +676,22 @@ export class InputManager {
    * Clean up event listeners
    */
   dispose(): void {
-    if (typeof window === 'undefined') return;
-    
-    window.removeEventListener('keydown', this.onKeyDown);
-    window.removeEventListener('keyup', this.onKeyUp);
-    
+    if (typeof window === "undefined") return;
+
+    window.removeEventListener("keydown", this.onKeyDown);
+    window.removeEventListener("keyup", this.onKeyUp);
+
     const target = this.canvas || window;
-    target.removeEventListener('mousedown', this.onMouseDown as EventListener);
-    target.removeEventListener('mouseup', this.onMouseUp as EventListener);
-    target.removeEventListener('mousemove', this.onMouseMove as EventListener);
-    target.removeEventListener('touchstart', this.onTouchStart as EventListener);
-    target.removeEventListener('touchend', this.onTouchEnd as EventListener);
-    target.removeEventListener('touchmove', this.onTouchMove as EventListener);
-    
-    window.removeEventListener('gamepadconnected', this.onGamepadConnected);
-    window.removeEventListener('gamepaddisconnected', this.onGamepadDisconnected);
-    
+    target.removeEventListener("mousedown", this.onMouseDown as EventListener);
+    target.removeEventListener("mouseup", this.onMouseUp as EventListener);
+    target.removeEventListener("mousemove", this.onMouseMove as EventListener);
+    target.removeEventListener("touchstart", this.onTouchStart as EventListener);
+    target.removeEventListener("touchend", this.onTouchEnd as EventListener);
+    target.removeEventListener("touchmove", this.onTouchMove as EventListener);
+
+    window.removeEventListener("gamepadconnected", this.onGamepadConnected);
+    window.removeEventListener("gamepaddisconnected", this.onGamepadDisconnected);
+
     this.initialized = false;
   }
 }
-

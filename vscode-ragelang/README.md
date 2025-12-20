@@ -54,6 +54,7 @@ Ragelang is a unique programming language where:
 4. Characters can be supported by characters directly below or diagonally adjacent below
 
 Example:
+
 ```ragelang
     x = 5
 
@@ -71,6 +72,7 @@ In this example, `x = 5` will fall because there's nothing supporting it, while 
 4. Select the downloaded file
 
 Or install from source:
+
 ```bash
 cd vscode-ragelang
 npm install
@@ -98,4 +100,3 @@ npm run package
 ## License
 
 MIT
-

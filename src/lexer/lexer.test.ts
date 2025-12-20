@@ -1,22 +1,22 @@
-import { describe, it, expect } from 'vitest';
-import { Lexer } from './lexer.js';
-import { TokenType } from './tokens.js';
+import { describe, it, expect } from "vitest";
+import { Lexer } from "./lexer.js";
+import { TokenType } from "./tokens.js";
 
-describe('Lexer', () => {
-  it('should tokenize simple identifiers', () => {
-    const lexer = new Lexer('hello world');
+describe("Lexer", () => {
+  it("should tokenize simple identifiers", () => {
+    const lexer = new Lexer("hello world");
     const tokens = lexer.tokenize();
 
     expect(tokens).toHaveLength(3); // hello, world, EOF
     expect(tokens[0].type).toBe(TokenType.IDENTIFIER);
-    expect(tokens[0].lexeme).toBe('hello');
+    expect(tokens[0].lexeme).toBe("hello");
     expect(tokens[1].type).toBe(TokenType.IDENTIFIER);
-    expect(tokens[1].lexeme).toBe('world');
+    expect(tokens[1].lexeme).toBe("world");
     expect(tokens[2].type).toBe(TokenType.EOF);
   });
 
-  it('should tokenize numbers', () => {
-    const lexer = new Lexer('42 3.14');
+  it("should tokenize numbers", () => {
+    const lexer = new Lexer("42 3.14");
     const tokens = lexer.tokenize();
 
     expect(tokens).toHaveLength(3);
@@ -26,17 +26,17 @@ describe('Lexer', () => {
     expect(tokens[1].literal).toBe(3.14);
   });
 
-  it('should tokenize strings', () => {
+  it("should tokenize strings", () => {
     const lexer = new Lexer('"Hello, World!"');
     const tokens = lexer.tokenize();
 
     expect(tokens).toHaveLength(2);
     expect(tokens[0].type).toBe(TokenType.STRING);
-    expect(tokens[0].literal).toBe('Hello, World!');
+    expect(tokens[0].literal).toBe("Hello, World!");
   });
 
-  it('should tokenize keywords', () => {
-    const lexer = new Lexer('draw update if else true false prototype');
+  it("should tokenize keywords", () => {
+    const lexer = new Lexer("draw update if else true false prototype");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.DRAW);
@@ -48,8 +48,8 @@ describe('Lexer', () => {
     expect(tokens[6].type).toBe(TokenType.PROTOTYPE);
   });
 
-  it('should tokenize operators', () => {
-    const lexer = new Lexer('+ - * / % = == != < <= > >=');
+  it("should tokenize operators", () => {
+    const lexer = new Lexer("+ - * / % = == != < <= > >=");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.PLUS);
@@ -66,8 +66,8 @@ describe('Lexer', () => {
     expect(tokens[11].type).toBe(TokenType.GREATER_EQUAL);
   });
 
-  it('should tokenize compound assignment operators', () => {
-    const lexer = new Lexer('+= -= *= /= %= &= |= ^=');
+  it("should tokenize compound assignment operators", () => {
+    const lexer = new Lexer("+= -= *= /= %= &= |= ^=");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.PLUS_EQUAL);
@@ -80,16 +80,16 @@ describe('Lexer', () => {
     expect(tokens[7].type).toBe(TokenType.CARET_EQUAL);
   });
 
-  it('should tokenize increment and decrement operators', () => {
-    const lexer = new Lexer('++ --');
+  it("should tokenize increment and decrement operators", () => {
+    const lexer = new Lexer("++ --");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.PLUS_PLUS);
     expect(tokens[1].type).toBe(TokenType.MINUS_MINUS);
   });
 
-  it('should distinguish between + and ++ and +=', () => {
-    const lexer = new Lexer('+ ++ +=');
+  it("should distinguish between + and ++ and +=", () => {
+    const lexer = new Lexer("+ ++ +=");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.PLUS);
@@ -97,8 +97,8 @@ describe('Lexer', () => {
     expect(tokens[2].type).toBe(TokenType.PLUS_EQUAL);
   });
 
-  it('should tokenize delimiters', () => {
-    const lexer = new Lexer('( ) { } [ ] , . ;');
+  it("should tokenize delimiters", () => {
+    const lexer = new Lexer("( ) { } [ ] , . ;");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.LPAREN);
@@ -112,20 +112,20 @@ describe('Lexer', () => {
     expect(tokens[8].type).toBe(TokenType.SEMICOLON);
   });
 
-  it('should tokenize comments', () => {
-    const lexer = new Lexer('foo // this is a comment\nbar');
+  it("should tokenize comments", () => {
+    const lexer = new Lexer("foo // this is a comment\nbar");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.IDENTIFIER);
-    expect(tokens[0].lexeme).toBe('foo');
+    expect(tokens[0].lexeme).toBe("foo");
     expect(tokens[1].type).toBe(TokenType.COMMENT);
     expect(tokens[2].type).toBe(TokenType.NEWLINE);
     expect(tokens[3].type).toBe(TokenType.IDENTIFIER);
-    expect(tokens[3].lexeme).toBe('bar');
+    expect(tokens[3].lexeme).toBe("bar");
   });
 
-  it('should tokenize foundation markers', () => {
-    const lexer = new Lexer('###');
+  it("should tokenize foundation markers", () => {
+    const lexer = new Lexer("###");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.FOUNDATION);
@@ -133,7 +133,7 @@ describe('Lexer', () => {
     expect(tokens[2].type).toBe(TokenType.FOUNDATION);
   });
 
-  it('should tokenize a complete program', () => {
+  it("should tokenize a complete program", () => {
     const source = `
 player = prototype()
 player.x = 100
@@ -156,25 +156,25 @@ update(dt) {
     expect(tokens[tokens.length - 1].type).toBe(TokenType.EOF);
   });
 
-  it('should track line and column numbers', () => {
-    const lexer = new Lexer('foo\nbar');
+  it("should track line and column numbers", () => {
+    const lexer = new Lexer("foo\nbar");
     const tokens = lexer.tokenize();
 
-    expect(tokens[0].line).toBe(1);  // foo
+    expect(tokens[0].line).toBe(1); // foo
     expect(tokens[1].type).toBe(TokenType.NEWLINE);
-    expect(tokens[2].line).toBe(2);  // bar
+    expect(tokens[2].line).toBe(2); // bar
   });
 
-  it('should handle empty input', () => {
-    const lexer = new Lexer('');
+  it("should handle empty input", () => {
+    const lexer = new Lexer("");
     const tokens = lexer.tokenize();
 
     expect(tokens).toHaveLength(1);
     expect(tokens[0].type).toBe(TokenType.EOF);
   });
 
-  it('should handle logical operators', () => {
-    const lexer = new Lexer('and or');
+  it("should handle logical operators", () => {
+    const lexer = new Lexer("and or");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.AND);
@@ -183,8 +183,8 @@ update(dt) {
 
   // ============ NEW TOKEN TESTS ============
 
-  it('should tokenize power operator', () => {
-    const lexer = new Lexer('2 ** 3');
+  it("should tokenize power operator", () => {
+    const lexer = new Lexer("2 ** 3");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.NUMBER);
@@ -192,8 +192,8 @@ update(dt) {
     expect(tokens[2].type).toBe(TokenType.NUMBER);
   });
 
-  it('should tokenize C-style logical operators', () => {
-    const lexer = new Lexer('x && y || z');
+  it("should tokenize C-style logical operators", () => {
+    const lexer = new Lexer("x && y || z");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.IDENTIFIER);
@@ -203,8 +203,8 @@ update(dt) {
     expect(tokens[4].type).toBe(TokenType.IDENTIFIER);
   });
 
-  it('should tokenize bitwise operators', () => {
-    const lexer = new Lexer('a & b | c ^ d ~ e');
+  it("should tokenize bitwise operators", () => {
+    const lexer = new Lexer("a & b | c ^ d ~ e");
     const tokens = lexer.tokenize();
 
     expect(tokens[1].type).toBe(TokenType.AMPERSAND);
@@ -213,24 +213,24 @@ update(dt) {
     expect(tokens[7].type).toBe(TokenType.TILDE);
   });
 
-  it('should tokenize shift operators', () => {
-    const lexer = new Lexer('x << 2 >> 1');
+  it("should tokenize shift operators", () => {
+    const lexer = new Lexer("x << 2 >> 1");
     const tokens = lexer.tokenize();
 
     expect(tokens[1].type).toBe(TokenType.LESS_LESS);
     expect(tokens[3].type).toBe(TokenType.GREATER_GREATER);
   });
 
-  it('should tokenize fat arrow', () => {
-    const lexer = new Lexer('=> x');
+  it("should tokenize fat arrow", () => {
+    const lexer = new Lexer("=> x");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.FAT_ARROW);
     expect(tokens[1].type).toBe(TokenType.IDENTIFIER);
   });
 
-  it('should tokenize colon', () => {
-    const lexer = new Lexer('a : b');
+  it("should tokenize colon", () => {
+    const lexer = new Lexer("a : b");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.IDENTIFIER);
@@ -238,8 +238,8 @@ update(dt) {
     expect(tokens[2].type).toBe(TokenType.IDENTIFIER);
   });
 
-  it('should tokenize underscore as wildcard', () => {
-    const lexer = new Lexer('match _ => x');
+  it("should tokenize underscore as wildcard", () => {
+    const lexer = new Lexer("match _ => x");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.MATCH);
@@ -247,8 +247,8 @@ update(dt) {
     expect(tokens[2].type).toBe(TokenType.FAT_ARROW);
   });
 
-  it('should tokenize enum keyword', () => {
-    const lexer = new Lexer('enum State { Idle Active }');
+  it("should tokenize enum keyword", () => {
+    const lexer = new Lexer("enum State { Idle Active }");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.ENUM);
@@ -259,8 +259,8 @@ update(dt) {
     expect(tokens[5].type).toBe(TokenType.RBRACE);
   });
 
-  it('should tokenize match keyword', () => {
-    const lexer = new Lexer('match state { Idle => x }');
+  it("should tokenize match keyword", () => {
+    const lexer = new Lexer("match state { Idle => x }");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.MATCH);
@@ -270,8 +270,8 @@ update(dt) {
     expect(tokens[4].type).toBe(TokenType.FAT_ARROW);
   });
 
-  it('should tokenize fun keyword', () => {
-    const lexer = new Lexer('fun add(a, b) { return a + b }');
+  it("should tokenize fun keyword", () => {
+    const lexer = new Lexer("fun add(a, b) { return a + b }");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.FUN);
@@ -279,8 +279,8 @@ update(dt) {
     expect(tokens[2].type).toBe(TokenType.LPAREN);
   });
 
-  it('should tokenize loop keyword', () => {
-    const lexer = new Lexer('loop { break }');
+  it("should tokenize loop keyword", () => {
+    const lexer = new Lexer("loop { break }");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.LOOP);
@@ -289,16 +289,16 @@ update(dt) {
     expect(tokens[3].type).toBe(TokenType.RBRACE);
   });
 
-  it('should tokenize return keyword', () => {
-    const lexer = new Lexer('return 42');
+  it("should tokenize return keyword", () => {
+    const lexer = new Lexer("return 42");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.RETURN);
     expect(tokens[1].type).toBe(TokenType.NUMBER);
   });
 
-  it('should tokenize hexadecimal numbers', () => {
-    const lexer = new Lexer('0xFF 0x10 0xABCD');
+  it("should tokenize hexadecimal numbers", () => {
+    const lexer = new Lexer("0xFF 0x10 0xABCD");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.NUMBER);
@@ -306,11 +306,11 @@ update(dt) {
     expect(tokens[1].type).toBe(TokenType.NUMBER);
     expect(tokens[1].literal).toBe(16);
     expect(tokens[2].type).toBe(TokenType.NUMBER);
-    expect(tokens[2].literal).toBe(0xABCD);
+    expect(tokens[2].literal).toBe(0xabcd);
   });
 
-  it('should tokenize binary numbers', () => {
-    const lexer = new Lexer('0b1010 0b11111111');
+  it("should tokenize binary numbers", () => {
+    const lexer = new Lexer("0b1010 0b11111111");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.NUMBER);
@@ -319,8 +319,8 @@ update(dt) {
     expect(tokens[1].literal).toBe(255);
   });
 
-  it('should tokenize scientific notation', () => {
-    const lexer = new Lexer('1e10 2.5e-3');
+  it("should tokenize scientific notation", () => {
+    const lexer = new Lexer("1e10 2.5e-3");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.NUMBER);
@@ -329,8 +329,8 @@ update(dt) {
     expect(tokens[1].literal).toBe(2.5e-3);
   });
 
-  it('should tokenize array brackets', () => {
-    const lexer = new Lexer('[1, 2, 3]');
+  it("should tokenize array brackets", () => {
+    const lexer = new Lexer("[1, 2, 3]");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.LBRACKET);
@@ -339,8 +339,8 @@ update(dt) {
     expect(tokens[6].type).toBe(TokenType.RBRACKET);
   });
 
-  it('should tokenize object literal syntax', () => {
-    const lexer = new Lexer('{x: 1, y: 2}');
+  it("should tokenize object literal syntax", () => {
+    const lexer = new Lexer("{x: 1, y: 2}");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.LBRACE);
@@ -350,8 +350,8 @@ update(dt) {
     expect(tokens[4].type).toBe(TokenType.COMMA);
   });
 
-  it('should tokenize slice syntax', () => {
-    const lexer = new Lexer('arr[1:3]');
+  it("should tokenize slice syntax", () => {
+    const lexer = new Lexer("arr[1:3]");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.IDENTIFIER);
@@ -362,7 +362,7 @@ update(dt) {
     expect(tokens[5].type).toBe(TokenType.RBRACKET);
   });
 
-  it('should tokenize complete enum declaration', () => {
+  it("should tokenize complete enum declaration", () => {
     const lexer = new Lexer(`
 enum GameState {
   Menu,
@@ -372,17 +372,17 @@ enum GameState {
 }
 `);
     const tokens = lexer.tokenize();
-    
+
     // Find enum keyword
-    const enumIdx = tokens.findIndex(t => t.type === TokenType.ENUM);
+    const enumIdx = tokens.findIndex((t) => t.type === TokenType.ENUM);
     expect(enumIdx).toBeGreaterThanOrEqual(0);
-    
+
     // Check structure
     expect(tokens[enumIdx + 1].type).toBe(TokenType.IDENTIFIER);
-    expect(tokens[enumIdx + 1].lexeme).toBe('GameState');
+    expect(tokens[enumIdx + 1].lexeme).toBe("GameState");
   });
 
-  it('should tokenize match expression', () => {
+  it("should tokenize match expression", () => {
     const lexer = new Lexer(`
 match state {
   Idle => handle_idle(),
@@ -391,20 +391,20 @@ match state {
 }
 `);
     const tokens = lexer.tokenize();
-    
-    const matchIdx = tokens.findIndex(t => t.type === TokenType.MATCH);
+
+    const matchIdx = tokens.findIndex((t) => t.type === TokenType.MATCH);
     expect(matchIdx).toBeGreaterThanOrEqual(0);
-    
+
     // Check for fat arrows
-    const arrows = tokens.filter(t => t.type === TokenType.FAT_ARROW);
+    const arrows = tokens.filter((t) => t.type === TokenType.FAT_ARROW);
     expect(arrows.length).toBe(3);
-    
+
     // Check for underscore wildcard
-    const underscores = tokens.filter(t => t.type === TokenType.UNDERSCORE);
+    const underscores = tokens.filter((t) => t.type === TokenType.UNDERSCORE);
     expect(underscores.length).toBe(1);
   });
 
-  it('should not confuse # in strings with foundation markers', () => {
+  it("should not confuse # in strings with foundation markers", () => {
     const lexer = new Lexer('color = "#ff0000"');
     const tokens = lexer.tokenize();
 
@@ -412,32 +412,31 @@ match state {
     expect(tokens[0].type).toBe(TokenType.IDENTIFIER);
     expect(tokens[1].type).toBe(TokenType.EQUAL);
     expect(tokens[2].type).toBe(TokenType.STRING);
-    expect(tokens[2].literal).toBe('#ff0000');
+    expect(tokens[2].literal).toBe("#ff0000");
     // No FOUNDATION tokens
-    const foundations = tokens.filter(t => t.type === TokenType.FOUNDATION);
+    const foundations = tokens.filter((t) => t.type === TokenType.FOUNDATION);
     expect(foundations.length).toBe(0);
   });
 
   // ============ NULL KEYWORD ============
 
-  it('should tokenize null keyword', () => {
-    const lexer = new Lexer('x = null');
+  it("should tokenize null keyword", () => {
+    const lexer = new Lexer("x = null");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.IDENTIFIER);
     expect(tokens[1].type).toBe(TokenType.EQUAL);
     expect(tokens[2].type).toBe(TokenType.NULL);
-    expect(tokens[2].lexeme).toBe('null');
+    expect(tokens[2].lexeme).toBe("null");
   });
 
-  it('should distinguish null from identifiers starting with null', () => {
-    const lexer = new Lexer('nullable = null');
+  it("should distinguish null from identifiers starting with null", () => {
+    const lexer = new Lexer("nullable = null");
     const tokens = lexer.tokenize();
 
     expect(tokens[0].type).toBe(TokenType.IDENTIFIER);
-    expect(tokens[0].lexeme).toBe('nullable');
+    expect(tokens[0].lexeme).toBe("nullable");
     expect(tokens[2].type).toBe(TokenType.NULL);
-    expect(tokens[2].lexeme).toBe('null');
+    expect(tokens[2].lexeme).toBe("null");
   });
 });
-

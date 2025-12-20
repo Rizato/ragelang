@@ -27,9 +27,9 @@ import type {
   NumberLiteral,
   StringLiteral,
   BooleanLiteral,
-} from '../parser/ast.js';
-import { CanvasRenderer } from '../renderer/canvas.js';
-import { InputManager } from '../input/input.js';
+} from "../parser/ast.js";
+import { CanvasRenderer } from "../renderer/canvas.js";
+import { InputManager } from "../input/input.js";
 import {
   type RageValue,
   type RageFunction,
@@ -41,7 +41,7 @@ import {
   isEnumVariantDef,
   isEnumVariant,
   createEnumVariant,
-} from './builtins.js';
+} from "./builtins.js";
 
 /**
  * Return exception for unwinding the call stack
@@ -56,10 +56,12 @@ class ReturnException {
 class BreakException {}
 
 function isRageFunction(value: RageValue): value is RageFunction {
-  return typeof value === 'object' && 
-         value !== null && 
-         !Array.isArray(value) &&
-         (value as RageFunction).__type === 'function';
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    (value as RageFunction).__type === "function"
+  );
 }
 
 /**
@@ -115,14 +117,14 @@ export class Interpreter {
   private currentEnv: Environment;
   private builtins: Map<string, BuiltinFunction>;
   private inputManager: InputManager;
-  
+
   private drawBlock: DrawBlock | null = null;
   private updateBlock: UpdateBlock | null = null;
   private animationFrameId: number | null = null;
   private lastTime: number = 0;
   private running: boolean = false;
   private frameCount: number = 0;
-  
+
   // Scene loading support
   private pendingScene: string | null = null;
   private onSceneChange: ((path: string) => void) | null = null;
@@ -130,20 +132,20 @@ export class Interpreter {
   constructor(renderer: CanvasRenderer, inputManager?: InputManager) {
     this.globalEnv = new Environment();
     this.currentEnv = this.globalEnv;
-    
+
     // Create or use provided input manager
     this.inputManager = inputManager ?? new InputManager();
-    
+
     // If we have a canvas from the renderer, set it for input
     const ctx = renderer.getContext();
     if (ctx?.canvas) {
       this.inputManager.setCanvas(ctx.canvas);
     }
-    
+
     this.builtins = createBuiltins(
-      renderer, 
-      undefined, 
-      this.inputManager, 
+      renderer,
+      undefined,
+      this.inputManager,
       () => this.frameCount,
       (path: string) => this.requestSceneChange(path)
     );
@@ -153,55 +155,55 @@ export class Interpreter {
       this.globalEnv.define(name, fn);
     }
   }
-  
+
   /**
    * Set callback for scene changes
    */
   setOnSceneChange(callback: (path: string) => void): void {
     this.onSceneChange = callback;
   }
-  
+
   /**
    * Request a scene change (called by load_scene builtin)
    */
   private requestSceneChange(path: string): void {
     this.pendingScene = path;
   }
-  
+
   /**
    * Check if a scene change is pending and get the path
    */
   getPendingScene(): string | null {
     return this.pendingScene;
   }
-  
+
   /**
    * Clear pending scene (call after handling the scene change)
    */
   clearPendingScene(): void {
     this.pendingScene = null;
   }
-  
+
   /**
    * Reset the interpreter to initial state (for scene changes)
    */
   reset(): void {
     // Stop any running game loop
     this.stopGameLoop();
-    
+
     // Reset environment
     this.globalEnv = new Environment();
     this.currentEnv = this.globalEnv;
-    
+
     // Re-add builtins to fresh environment
     for (const [name, fn] of this.builtins) {
       this.globalEnv.define(name, fn);
     }
-    
+
     // Clear blocks
     this.drawBlock = null;
     this.updateBlock = null;
-    
+
     // Reset game state
     this.frameCount = 0;
     this.lastTime = 0;
@@ -291,37 +293,37 @@ export class Interpreter {
 
   private executeStatement(stmt: Statement): void {
     switch (stmt.type) {
-      case 'DrawBlock':
+      case "DrawBlock":
         this.drawBlock = stmt;
         break;
-      case 'UpdateBlock':
+      case "UpdateBlock":
         this.updateBlock = stmt;
         break;
-      case 'FunctionDeclaration':
+      case "FunctionDeclaration":
         this.executeFunctionDeclaration(stmt);
         break;
-      case 'EnumDeclaration':
+      case "EnumDeclaration":
         this.executeEnumDeclaration(stmt as EnumDeclaration);
         break;
-      case 'ReturnStatement':
+      case "ReturnStatement":
         this.executeReturn(stmt);
         break;
-      case 'IfStatement':
+      case "IfStatement":
         this.executeIf(stmt);
         break;
-      case 'LoopStatement':
+      case "LoopStatement":
         this.executeLoop(stmt);
         break;
-      case 'BreakStatement':
+      case "BreakStatement":
         throw new BreakException();
         break;
-      case 'BlockStatement':
+      case "BlockStatement":
         this.executeBlock(stmt);
         break;
-      case 'ExpressionStatement':
+      case "ExpressionStatement":
         this.evaluate(stmt.expression);
         break;
-      case 'VariableDeclaration':
+      case "VariableDeclaration":
         this.executeVariableDeclaration(stmt);
         break;
     }
@@ -329,7 +331,7 @@ export class Interpreter {
 
   private executeFunctionDeclaration(stmt: FunctionDeclaration): void {
     const fn: RageFunction = {
-      __type: 'function',
+      __type: "function",
       name: stmt.name,
       parameters: stmt.parameters,
       body: stmt.body,
@@ -342,12 +344,12 @@ export class Interpreter {
     // Register each variant as a callable constructor in the environment
     for (const variant of stmt.variants) {
       const variantDef: RageEnumVariantDef = {
-        __type: 'enum_variant_def',
+        __type: "enum_variant_def",
         enumName: stmt.name,
         variantName: variant.name,
         fields: variant.fields,
       };
-      
+
       // Unit variants (no fields) are stored as a pre-created instance
       if (variant.fields.length === 0) {
         const instance = createEnumVariant(stmt.name, variant.name);
@@ -366,12 +368,12 @@ export class Interpreter {
 
   private executeIf(stmt: IfStatement): void {
     const condition = this.evaluate(stmt.condition);
-    
+
     if (this.isTruthy(condition)) {
       // Don't create new scope for if/else blocks - flat scoping
       this.executeBlockStatements(stmt.consequent);
     } else if (stmt.alternate) {
-      if (stmt.alternate.type === 'IfStatement') {
+      if (stmt.alternate.type === "IfStatement") {
         this.executeIf(stmt.alternate);
       } else {
         this.executeBlockStatements(stmt.alternate);
@@ -425,39 +427,39 @@ export class Interpreter {
 
   private evaluate(expr: Expression): RageValue {
     switch (expr.type) {
-      case 'NumberLiteral':
+      case "NumberLiteral":
         return (expr as NumberLiteral).value;
-      case 'StringLiteral':
+      case "StringLiteral":
         return (expr as StringLiteral).value;
-      case 'BooleanLiteral':
+      case "BooleanLiteral":
         return (expr as BooleanLiteral).value;
-      case 'NullLiteral':
+      case "NullLiteral":
         return null;
-      case 'ArrayLiteral':
+      case "ArrayLiteral":
         return this.evaluateArrayLiteral(expr as ArrayLiteral);
-      case 'ObjectLiteral':
+      case "ObjectLiteral":
         return this.evaluateObjectLiteral(expr as ObjectLiteral);
-      case 'MatchExpression':
+      case "MatchExpression":
         return this.evaluateMatch(expr as MatchExpression);
-      case 'Identifier':
+      case "Identifier":
         return this.currentEnv.get((expr as Identifier).name);
-      case 'PrototypeExpression':
+      case "PrototypeExpression":
         return createPrototype();
-      case 'BinaryExpression':
+      case "BinaryExpression":
         return this.evaluateBinary(expr as BinaryExpression);
-      case 'UnaryExpression':
+      case "UnaryExpression":
         return this.evaluateUnary(expr as UnaryExpression);
-      case 'CallExpression':
+      case "CallExpression":
         return this.evaluateCall(expr as CallExpression);
-      case 'MemberExpression':
+      case "MemberExpression":
         return this.evaluateMember(expr as MemberExpression);
-      case 'IndexExpression':
+      case "IndexExpression":
         return this.evaluateIndex(expr as IndexExpression);
-      case 'SliceExpression':
+      case "SliceExpression":
         return this.evaluateSlice(expr as SliceExpression);
-      case 'AssignmentExpression':
+      case "AssignmentExpression":
         return this.evaluateAssignment(expr as AssignmentExpression);
-      case 'UpdateExpression':
+      case "UpdateExpression":
         return this.evaluateUpdate(expr as UpdateExpression);
       default:
         throw new Error(`Unknown expression type: ${(expr as Expression).type}`);
@@ -465,7 +467,7 @@ export class Interpreter {
   }
 
   private evaluateArrayLiteral(expr: ArrayLiteral): RageValue[] {
-    return expr.elements.map(el => this.evaluate(el));
+    return expr.elements.map((el) => this.evaluate(el));
   }
 
   private evaluateObjectLiteral(expr: ObjectLiteral): RageValue {
@@ -478,7 +480,7 @@ export class Interpreter {
 
   private evaluateMatch(expr: MatchExpression): RageValue {
     const subject = this.evaluate(expr.subject);
-    
+
     for (const arm of expr.arms) {
       const bindings = this.matchPattern(arm.pattern, subject);
       if (bindings !== null) {
@@ -487,12 +489,12 @@ export class Interpreter {
         for (const [name, value] of bindings) {
           matchEnv.define(name, value);
         }
-        
+
         const prevEnv = this.currentEnv;
         this.currentEnv = matchEnv;
         try {
           // Handle block statement bodies (containing statements)
-          if (arm.body.type === 'BlockStatement') {
+          if (arm.body.type === "BlockStatement") {
             this.executeBlockStatements(arm.body as BlockStatement);
             return null; // Block bodies don't return a value
           }
@@ -503,8 +505,8 @@ export class Interpreter {
         }
       }
     }
-    
-    throw new Error('Non-exhaustive match: no pattern matched');
+
+    throw new Error("Non-exhaustive match: no pattern matched");
   }
 
   /**
@@ -513,59 +515,60 @@ export class Interpreter {
    */
   private matchPattern(pattern: Pattern, value: RageValue): Map<string, RageValue> | null {
     switch (pattern.type) {
-      case 'WildcardPattern':
+      case "WildcardPattern":
         // _ matches anything
         return new Map();
-      
-      case 'LiteralPattern':
+
+      case "LiteralPattern":
         // Match exact value
         if (value === pattern.value) {
           return new Map();
         }
         return null;
-      
-      case 'IdentifierPattern': {
+
+      case "IdentifierPattern": {
         // Convention: PascalCase identifiers (starting with uppercase) in patterns
         // are treated as enum variant matches, not bindings
-        const isPascalCase = pattern.name.length > 0 && 
+        const isPascalCase =
+          pattern.name.length > 0 &&
           pattern.name[0] === pattern.name[0].toUpperCase() &&
           pattern.name[0] !== pattern.name[0].toLowerCase();
-        
+
         if (isPascalCase) {
           // This should match an enum variant with this name
           if (!isEnumVariant(value)) {
-            return null;  // Not an enum variant, no match
+            return null; // Not an enum variant, no match
           }
           if (value.variantName !== pattern.name) {
-            return null;  // Different variant name, no match
+            return null; // Different variant name, no match
           }
-          return new Map();  // Matched!
+          return new Map(); // Matched!
         }
-        
+
         // lowercase identifiers bind the value to the identifier
         return new Map([[pattern.name, value]]);
       }
-      
-      case 'VariantPattern': {
+
+      case "VariantPattern": {
         // Match enum variant
         if (!isEnumVariant(value)) {
           return null;
         }
-        
+
         // Check variant name matches
         if (value.variantName !== pattern.variantName) {
           return null;
         }
-        
+
         // Check enum name if specified
         if (pattern.enumName !== null && value.enumName !== pattern.enumName) {
           return null;
         }
-        
+
         // Extract bindings from variant data
         const bindings = new Map<string, RageValue>();
         const dataEntries = Array.from(value.data.entries());
-        
+
         for (let i = 0; i < pattern.bindings.length; i++) {
           const bindingName = pattern.bindings[i];
           if (i < dataEntries.length) {
@@ -574,10 +577,10 @@ export class Interpreter {
             bindings.set(bindingName, null);
           }
         }
-        
+
         return bindings;
       }
-      
+
       default:
         return null;
     }
@@ -587,8 +590,8 @@ export class Interpreter {
     // Handle short-circuit evaluation for logical operators FIRST
     // These must not evaluate the right operand unless necessary
     switch (expr.operator) {
-      case 'and':
-      case '&&': {
+      case "and":
+      case "&&": {
         const left = this.evaluate(expr.left);
         // Short-circuit: if left is falsy, return left without evaluating right
         if (!this.isTruthy(left)) {
@@ -597,8 +600,8 @@ export class Interpreter {
         // Left is truthy, evaluate and return right
         return this.evaluate(expr.right);
       }
-      case 'or':
-      case '||': {
+      case "or":
+      case "||": {
         const left = this.evaluate(expr.left);
         // Short-circuit: if left is truthy, return left without evaluating right
         if (this.isTruthy(left)) {
@@ -615,48 +618,48 @@ export class Interpreter {
 
     switch (expr.operator) {
       // Arithmetic
-      case '+':
-        if (typeof left === 'string' || typeof right === 'string') {
+      case "+":
+        if (typeof left === "string" || typeof right === "string") {
           return String(left) + String(right);
         }
         return Number(left) + Number(right);
-      case '-':
+      case "-":
         return Number(left) - Number(right);
-      case '*':
+      case "*":
         return Number(left) * Number(right);
-      case '/':
+      case "/":
         return Number(left) / Number(right);
-      case '%':
+      case "%":
         return Number(left) % Number(right);
-      case '**':
+      case "**":
         return Math.pow(Number(left), Number(right));
-      
+
       // Comparison
-      case '==':
+      case "==":
         return left === right;
-      case '!=':
+      case "!=":
         return left !== right;
-      case '<':
+      case "<":
         return Number(left) < Number(right);
-      case '<=':
+      case "<=":
         return Number(left) <= Number(right);
-      case '>':
+      case ">":
         return Number(left) > Number(right);
-      case '>=':
+      case ">=":
         return Number(left) >= Number(right);
-      
+
       // Bitwise
-      case '&':
+      case "&":
         return (Number(left) | 0) & (Number(right) | 0);
-      case '|':
-        return (Number(left) | 0) | (Number(right) | 0);
-      case '^':
+      case "|":
+        return Number(left) | 0 | (Number(right) | 0);
+      case "^":
         return (Number(left) | 0) ^ (Number(right) | 0);
-      case '<<':
+      case "<<":
         return (Number(left) | 0) << (Number(right) | 0);
-      case '>>':
+      case ">>":
         return (Number(left) | 0) >> (Number(right) | 0);
-      
+
       default:
         throw new Error(`Unknown operator: ${expr.operator}`);
     }
@@ -666,11 +669,11 @@ export class Interpreter {
     const value = this.evaluate(expr.argument);
 
     switch (expr.operator) {
-      case '-':
+      case "-":
         return -Number(value);
-      case '!':
+      case "!":
         return !this.isTruthy(value);
-      case '~':
+      case "~":
         return ~(Number(value) | 0);
       default:
         throw new Error(`Unknown unary operator: ${expr.operator}`);
@@ -679,76 +682,76 @@ export class Interpreter {
 
   // Parameter names for built-in functions (for keyword argument support)
   private static BUILTIN_PARAMS: Record<string, string[]> = {
-    'sprite': ['path', 'x', 'y', 'width', 'height', 'sx', 'sy', 'sw', 'sh', 'color'],
-    'text': ['text', 'x', 'y', 'size', 'color'],
-    'rect': ['x', 'y', 'width', 'height', 'color'],
-    'circle': ['x', 'y', 'radius', 'color'],
-    'line': ['x1', 'y1', 'x2', 'y2', 'color', 'width'],
-    'clear': ['color'],
-    'min': ['a', 'b'],
-    'max': ['a', 'b'],
-    'clamp': ['value', 'min', 'max'],
-    'lerp': ['a', 'b', 't'],
-    'distance': ['x1', 'y1', 'x2', 'y2'],
-    'rect_overlap': ['x1', 'y1', 'w1', 'h1', 'x2', 'y2', 'w2', 'h2'],
-    'randomInt': ['min', 'max'],
-    'push': ['arr', 'value'],
-    'insert': ['arr', 'index', 'value'],
-    'remove': ['arr', 'value'],
-    'extend': ['arr', 'other'],
-    'count': ['arr', 'value'],
-    'index': ['arr', 'value'],
-    'contains': ['arr', 'value'],
-    'slice': ['arr', 'start', 'end'],
-    'join': ['arr', 'separator'],
-    'array': ['size'],
+    sprite: ["path", "x", "y", "width", "height", "sx", "sy", "sw", "sh", "color"],
+    text: ["text", "x", "y", "size", "color"],
+    rect: ["x", "y", "width", "height", "color"],
+    circle: ["x", "y", "radius", "color"],
+    line: ["x1", "y1", "x2", "y2", "color", "width"],
+    clear: ["color"],
+    min: ["a", "b"],
+    max: ["a", "b"],
+    clamp: ["value", "min", "max"],
+    lerp: ["a", "b", "t"],
+    distance: ["x1", "y1", "x2", "y2"],
+    rect_overlap: ["x1", "y1", "w1", "h1", "x2", "y2", "w2", "h2"],
+    randomInt: ["min", "max"],
+    push: ["arr", "value"],
+    insert: ["arr", "index", "value"],
+    remove: ["arr", "value"],
+    extend: ["arr", "other"],
+    count: ["arr", "value"],
+    index: ["arr", "value"],
+    contains: ["arr", "value"],
+    slice: ["arr", "start", "end"],
+    join: ["arr", "separator"],
+    array: ["size"],
     // Audio
-    'music': ['path', 'volume'],
-    'music_volume': ['volume'],
-    'sound': ['path', 'gain'],
-    'master_volume': ['volume'],
+    music: ["path", "volume"],
+    music_volume: ["volume"],
+    sound: ["path", "gain"],
+    master_volume: ["volume"],
     // Input
-    'pressed': ['action'],
-    'held': ['action'],
-    'released': ['action'],
-    'key_pressed': ['key'],
-    'key_held': ['key'],
-    'key_released': ['key'],
-    'mouse_pressed': ['button'],
-    'mouse_held': ['button'],
-    'mouse_released': ['button'],
-    'touch_x': ['index'],
-    'touch_y': ['index'],
+    pressed: ["action"],
+    held: ["action"],
+    released: ["action"],
+    key_pressed: ["key"],
+    key_held: ["key"],
+    key_released: ["key"],
+    mouse_pressed: ["button"],
+    mouse_held: ["button"],
+    mouse_released: ["button"],
+    touch_x: ["index"],
+    touch_y: ["index"],
     // Input Buffer
-    'buffer_input': ['action', 'duration'],
-    'check_buffer': ['action'],
-    'peek_buffer': ['action'],
-    'clear_buffer': ['action'],
-    'buffer_time': ['action'],
+    buffer_input: ["action", "duration"],
+    check_buffer: ["action"],
+    peek_buffer: ["action"],
+    clear_buffer: ["action"],
+    buffer_time: ["action"],
     // Math
-    'deg': ['radians'],
-    'rad': ['degrees'],
-    'asin': ['x'],
-    'acos': ['x'],
-    'atan': ['x'],
-    'sinh': ['x'],
-    'cosh': ['x'],
-    'tanh': ['x'],
-    'log': ['x'],
-    'log10': ['x'],
-    'exp': ['x'],
+    deg: ["radians"],
+    rad: ["degrees"],
+    asin: ["x"],
+    acos: ["x"],
+    atan: ["x"],
+    sinh: ["x"],
+    cosh: ["x"],
+    tanh: ["x"],
+    log: ["x"],
+    log10: ["x"],
+    exp: ["x"],
     // Time
-    'time': [],
-    'frames': [],
+    time: [],
+    frames: [],
   };
 
   private evaluateCall(expr: CallExpression): RageValue {
     const callee = this.evaluate(expr.callee);
-    
+
     // Separate positional and keyword arguments
     const positionalArgs: RageValue[] = [];
     const keywordArgs: Map<string, RageValue> = new Map();
-    
+
     for (const arg of expr.arguments) {
       const value = this.evaluate(arg.value);
       if (arg.name === null) {
@@ -759,13 +762,13 @@ export class Interpreter {
     }
 
     // Built-in function
-    if (typeof callee === 'function') {
+    if (typeof callee === "function") {
       // Try to get parameter names for this builtin
       let builtinName: string | null = null;
-      if (expr.callee.type === 'Identifier') {
+      if (expr.callee.type === "Identifier") {
         builtinName = (expr.callee as Identifier).name;
       }
-      
+
       const params = builtinName ? Interpreter.BUILTIN_PARAMS[builtinName] : null;
       const args = this.resolveArgs(positionalArgs, keywordArgs, params);
       return callee(...args);
@@ -782,7 +785,7 @@ export class Interpreter {
       return this.callVariantConstructor(callee, args);
     }
 
-    throw new Error('Can only call functions or enum variant constructors');
+    throw new Error("Can only call functions or enum variant constructors");
   }
 
   /**
@@ -796,15 +799,15 @@ export class Interpreter {
     if (keyword.size === 0) {
       return positional;
     }
-    
+
     if (!params) {
       // No parameter info - just append keyword values after positional
       return [...positional, ...keyword.values()];
     }
-    
+
     // Build args array, filling in keyword args at correct positions
     const args: RageValue[] = [...positional];
-    
+
     // Extend array to accommodate keyword args
     for (const [name, value] of keyword) {
       const idx = params.indexOf(name);
@@ -817,23 +820,23 @@ export class Interpreter {
       }
       args[idx] = value;
     }
-    
+
     return args;
   }
 
   private callFunction(
-    fn: RageFunction, 
-    positionalArgs: RageValue[], 
+    fn: RageFunction,
+    positionalArgs: RageValue[],
     keywordArgs: Map<string, RageValue>
   ): RageValue {
     // Create new environment with closure as parent
     const fnEnv = new Environment(fn.closure as Environment);
-    
+
     // First, bind positional arguments
     for (let i = 0; i < fn.parameters.length; i++) {
       fnEnv.define(fn.parameters[i], positionalArgs[i] ?? null);
     }
-    
+
     // Then, override with keyword arguments
     for (const [name, value] of keywordArgs) {
       if (!fn.parameters.includes(name)) {
@@ -861,11 +864,11 @@ export class Interpreter {
 
   private callVariantConstructor(variantDef: RageEnumVariantDef, args: RageValue[]): RageValue {
     const data = new Map<string, RageValue>();
-    
+
     for (let i = 0; i < variantDef.fields.length; i++) {
       data.set(variantDef.fields[i], args[i] ?? null);
     }
-    
+
     return createEnumVariant(variantDef.enumName, variantDef.variantName, data);
   }
 
@@ -874,14 +877,14 @@ export class Interpreter {
     const property = expr.property.name;
 
     if (object === null) {
-      throw new Error('Cannot access property on null');
+      throw new Error("Cannot access property on null");
     }
 
     if (isPrototype(object)) {
       return object[property] ?? null;
     }
 
-    throw new Error('Can only access properties on prototypes');
+    throw new Error("Can only access properties on prototypes");
   }
 
   private evaluateIndex(expr: IndexExpression): RageValue {
@@ -895,7 +898,7 @@ export class Interpreter {
       return object[idx] ?? null;
     }
 
-    if (typeof object === 'string') {
+    if (typeof object === "string") {
       let idx = Number(index) | 0;
       if (idx < 0) idx = object.length + idx;
       return object[idx] ?? null;
@@ -905,7 +908,7 @@ export class Interpreter {
       return object[String(index)] ?? null;
     }
 
-    throw new Error('Can only index into arrays, strings, or prototypes');
+    throw new Error("Can only index into arrays, strings, or prototypes");
   }
 
   private evaluateSlice(expr: SliceExpression): RageValue {
@@ -927,31 +930,39 @@ export class Interpreter {
     };
 
     if (Array.isArray(object)) {
-      const start = normalizeIndex(startVal !== null ? Number(startVal) : null, object.length, false);
+      const start = normalizeIndex(
+        startVal !== null ? Number(startVal) : null,
+        object.length,
+        false
+      );
       const end = normalizeIndex(endVal !== null ? Number(endVal) : null, object.length, true);
       return object.slice(start, end);
     }
 
-    if (typeof object === 'string') {
-      const start = normalizeIndex(startVal !== null ? Number(startVal) : null, object.length, false);
+    if (typeof object === "string") {
+      const start = normalizeIndex(
+        startVal !== null ? Number(startVal) : null,
+        object.length,
+        false
+      );
       const end = normalizeIndex(endVal !== null ? Number(endVal) : null, object.length, true);
       return object.slice(start, end);
     }
 
-    throw new Error('Can only slice arrays or strings');
+    throw new Error("Can only slice arrays or strings");
   }
 
   private evaluateAssignment(expr: AssignmentExpression): RageValue {
     const rightValue = this.evaluate(expr.right);
-    
+
     // Get the current value for compound assignments
     let currentValue: RageValue = null;
-    if (expr.operator !== '=') {
-      if (expr.left.type === 'Identifier') {
+    if (expr.operator !== "=") {
+      if (expr.left.type === "Identifier") {
         currentValue = this.currentEnv.get((expr.left as Identifier).name);
-      } else if (expr.left.type === 'MemberExpression') {
+      } else if (expr.left.type === "MemberExpression") {
         currentValue = this.evaluateMember(expr.left as MemberExpression);
-      } else if (expr.left.type === 'IndexExpression') {
+      } else if (expr.left.type === "IndexExpression") {
         currentValue = this.evaluateIndex(expr.left as IndexExpression);
       }
     }
@@ -959,35 +970,35 @@ export class Interpreter {
     // Calculate the new value based on operator
     let value: RageValue;
     switch (expr.operator) {
-      case '=':
+      case "=":
         value = rightValue;
         break;
-      case '+=':
-        if (typeof currentValue === 'string' || typeof rightValue === 'string') {
+      case "+=":
+        if (typeof currentValue === "string" || typeof rightValue === "string") {
           value = String(currentValue) + String(rightValue);
         } else {
           value = (currentValue as number) + (rightValue as number);
         }
         break;
-      case '-=':
+      case "-=":
         value = (currentValue as number) - (rightValue as number);
         break;
-      case '*=':
+      case "*=":
         value = (currentValue as number) * (rightValue as number);
         break;
-      case '/=':
+      case "/=":
         value = (currentValue as number) / (rightValue as number);
         break;
-      case '%=':
+      case "%=":
         value = (currentValue as number) % (rightValue as number);
         break;
-      case '&=':
+      case "&=":
         value = (currentValue as number) & (rightValue as number);
         break;
-      case '|=':
+      case "|=":
         value = (currentValue as number) | (rightValue as number);
         break;
-      case '^=':
+      case "^=":
         value = (currentValue as number) ^ (rightValue as number);
         break;
       default:
@@ -995,10 +1006,10 @@ export class Interpreter {
     }
 
     // Assign the value
-    if (expr.left.type === 'Identifier') {
+    if (expr.left.type === "Identifier") {
       const name = (expr.left as Identifier).name;
       this.currentEnv.set(name, value);
-    } else if (expr.left.type === 'MemberExpression') {
+    } else if (expr.left.type === "MemberExpression") {
       const memberExpr = expr.left as MemberExpression;
       const object = this.evaluate(memberExpr.object);
       const property = memberExpr.property.name;
@@ -1006,9 +1017,9 @@ export class Interpreter {
       if (isPrototype(object)) {
         object[property] = value;
       } else {
-        throw new Error('Can only set properties on prototypes');
+        throw new Error("Can only set properties on prototypes");
       }
-    } else if (expr.left.type === 'IndexExpression') {
+    } else if (expr.left.type === "IndexExpression") {
       const indexExpr = expr.left as IndexExpression;
       const object = this.evaluate(indexExpr.object);
       const index = this.evaluate(indexExpr.index);
@@ -1019,7 +1030,7 @@ export class Interpreter {
       } else if (isPrototype(object)) {
         object[String(index)] = value;
       } else {
-        throw new Error('Can only index-assign to arrays or prototypes');
+        throw new Error("Can only index-assign to arrays or prototypes");
       }
     }
 
@@ -1029,31 +1040,31 @@ export class Interpreter {
   private evaluateUpdate(expr: UpdateExpression): RageValue {
     // Get current value
     let currentValue: RageValue;
-    if (expr.argument.type === 'Identifier') {
+    if (expr.argument.type === "Identifier") {
       currentValue = this.currentEnv.get((expr.argument as Identifier).name);
-    } else if (expr.argument.type === 'MemberExpression') {
+    } else if (expr.argument.type === "MemberExpression") {
       currentValue = this.evaluateMember(expr.argument as MemberExpression);
     } else {
       currentValue = this.evaluateIndex(expr.argument as IndexExpression);
     }
 
-    if (typeof currentValue !== 'number') {
-      throw new Error('Increment/decrement requires a number');
+    if (typeof currentValue !== "number") {
+      throw new Error("Increment/decrement requires a number");
     }
 
     // Calculate new value
-    const newValue = expr.operator === '++' ? currentValue + 1 : currentValue - 1;
+    const newValue = expr.operator === "++" ? currentValue + 1 : currentValue - 1;
 
     // Assign new value
-    if (expr.argument.type === 'Identifier') {
+    if (expr.argument.type === "Identifier") {
       this.currentEnv.set((expr.argument as Identifier).name, newValue);
-    } else if (expr.argument.type === 'MemberExpression') {
+    } else if (expr.argument.type === "MemberExpression") {
       const memberExpr = expr.argument as MemberExpression;
       const object = this.evaluate(memberExpr.object);
       if (isPrototype(object)) {
         object[memberExpr.property.name] = newValue;
       } else {
-        throw new Error('Can only set properties on prototypes');
+        throw new Error("Can only set properties on prototypes");
       }
     } else {
       const indexExpr = expr.argument as IndexExpression;
@@ -1064,7 +1075,7 @@ export class Interpreter {
       } else if (isPrototype(object)) {
         object[String(index)] = newValue;
       } else {
-        throw new Error('Can only index-assign to arrays or prototypes');
+        throw new Error("Can only index-assign to arrays or prototypes");
       }
     }
 
@@ -1074,9 +1085,9 @@ export class Interpreter {
 
   private isTruthy(value: RageValue): boolean {
     if (value === null) return false;
-    if (typeof value === 'boolean') return value;
-    if (typeof value === 'number') return value !== 0;
-    if (typeof value === 'string') return value.length > 0;
+    if (typeof value === "boolean") return value;
+    if (typeof value === "number") return value !== 0;
+    if (typeof value === "string") return value.length > 0;
     return true;
   }
 
@@ -1086,5 +1097,4 @@ export class Interpreter {
   getEnvironment(): Environment {
     return this.currentEnv;
   }
-
 }

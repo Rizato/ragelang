@@ -27,15 +27,17 @@ A Ragelang game where you play as a fledgling bird trying to return to its nest 
 From the `ragelang` directory:
 
 1. **Quick start** (builds once and serves):
+
    ```bash
    npm run fledgling:dev
    ```
 
 2. **With watch mode** (rebuilds on TypeScript changes):
+
    ```bash
    # Terminal 1: Watch TypeScript
    npm run dev
-   
+
    # Terminal 2: Serve Fledgling
    npm run fledgling:serve
    ```
@@ -54,6 +56,7 @@ npm run fledgling:serve
 If you prefer to run commands manually:
 
 1. Build the Ragelang library:
+
    ```bash
    npm run build:all
    ```
@@ -82,4 +85,3 @@ fledgling/
 ## Editing Code
 
 Click the "Edit Code" button in the bottom right to open the code editor. Make changes and click "Save & Restart" to apply them.
-
