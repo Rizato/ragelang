@@ -145,3 +145,4 @@ vite.config.ts.timestamp-*
 ragelang.bundle.js
 
 *.aseprite
+*.DS_STORE
