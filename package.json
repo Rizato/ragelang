@@ -24,7 +24,7 @@
     "fix-all": "npm run lint:all:fix && npm run format",
     "clean": "rm -rf dist",
     "fledgling:serve": "npx serve@latest fledgling -l 8080",
-    "fledgling:package": "cd fledgling && zip -r ../fledgling.zip . -x '*.git*' 'node_modules/*' '*.DS_Store' 'README.md'",
+    "fledgling:package": "cd fledgling && zip -r ../fledgling.zip . -x '*.git*' 'node_modules/*' '*.DS_Store' '*.aseprite' 'README.md'",
     "prepare": "husky"
   },
   "lint-staged": {
