@@ -1,6 +1,6 @@
 {
   "name": "ragelang",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "Ragelang interpreter - A rage-inducing programming language where unsupported characters fall",
   "type": "module",
   "main": "dist/index.js",
