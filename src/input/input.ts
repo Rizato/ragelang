@@ -527,6 +527,8 @@ export class InputManager {
     "KeyD",
     "KeyZ",
     "KeyX",
+    "KeyE",
+    "KeyP",
   ]);
 
   /**
