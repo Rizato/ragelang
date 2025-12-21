@@ -14,7 +14,7 @@ const ACTION_KEYS: Record<string, string[]> = {
   up: ["ArrowUp", "KeyW"],
   down: ["ArrowDown", "KeyS"],
   jump: ["Space"],
-  start: ["Escape"],
+  start: ["KeyP"],
   interact: ["KeyE"],
 };
 
@@ -527,6 +527,8 @@ export class InputManager {
     "KeyD",
     "KeyZ",
     "KeyX",
+    "KeyE",
+    "KeyP",
   ]);
 
   /**
