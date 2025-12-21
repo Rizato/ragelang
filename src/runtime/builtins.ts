@@ -611,6 +611,12 @@ export function createBuiltins(
     return pos ? pos.y : 0;
   });
 
+  // window_focused() - returns true if the window/document has focus
+  // Use this to pause the game when the player switches tabs or windows
+  builtins.set("window_focused", () => {
+    return document.hasFocus();
+  });
+
   // ============ Input Buffer (Platformer Mechanics) ============
 
   // buffer_input(action, duration) - buffers an input for duration seconds
