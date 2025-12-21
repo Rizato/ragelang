@@ -3,6 +3,7 @@ const { Ragelang } = window.RagelangLib;
 let ragelang = null;
 let gameCode = "";
 let currentScenePath = "assets/rage/menu.rage"; // Start with menu
+let editableCodePath = "assets/rage/fledgling.rage"; // Code to edit in editor
 let isEditorOpen = false;
 
 // Helper function to focus the canvas
@@ -180,7 +181,7 @@ function setupEditor() {
   const cancelBtn = document.getElementById("code-cancel-btn");
 
   // Toggle editor
-  editorToggle.addEventListener("click", (e) => {
+  editorToggle.addEventListener("click", async (e) => {
     e.preventDefault();
     if (isEditorOpen) {
       editorOverlay.classList.remove("active");
@@ -193,7 +194,13 @@ function setupEditor() {
     } else {
       editorOverlay.classList.add("active");
       isEditorOpen = true;
-      editor.value = gameCode;
+      // Load fledgling.rage code for editing
+      const editableCode = await loadRageCode(editableCodePath);
+      if (editableCode) {
+        editor.value = editableCode;
+      } else {
+        editor.value = gameCode; // Fallback to current game code
+      }
       if (ragelang) {
         ragelang.stop();
       }
