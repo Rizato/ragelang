@@ -23,10 +23,8 @@
     "check-all": "npm run lint:all && npm run type-check && npm run format:check",
     "fix-all": "npm run lint:all:fix && npm run format",
     "clean": "rm -rf dist",
-    "fledgling:dev": "npm run build && npm run bundle && cp dist/ragelang.bundle.js fledgling/assets/js/ && npx serve@latest fledgling -l 8080",
-    "fledgling:build": "npm run build:all && cp dist/ragelang.bundle.js fledgling/assets/js/",
     "fledgling:serve": "npx serve@latest fledgling -l 8080",
-    "fledgling:copy-bundle": "cp dist/ragelang.bundle.js fledgling/assets/js/",
+    "fledgling:package": "cd fledgling && zip -r ../fledgling.zip . -x '*.git*' 'node_modules/*' '*.DS_Store' 'README.md'",
     "prepare": "husky"
   },
   "lint-staged": {
